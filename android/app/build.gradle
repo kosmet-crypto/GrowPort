@@ -1,0 +1,78 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The web app lives at the repo root; copy it into the APK so it works offline.
+def webRoot = rootProject.file('..')
+tasks.register('copyWebApp', Copy) {
+    from(webRoot) {
+        include 'index.html'
+    }
+    into 'src/main/assets/www'
+}
+preBuild.dependsOn copyWebApp
+
+android {
+    namespace 'app.growport'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'app.growport'
+        minSdk 26
+        targetSdk 34  // 35 forces edge-to-edge; the page does not pad for system bars in a WebView
+        // CI passes the run number so each new APK installs over the previous one.
+        def runNumber = System.getenv('GITHUB_RUN_NUMBER')
+        def build = runNumber ? (runNumber as int) : 1
+        versionCode build
+        versionName "0.1.${build}"
+        // Fingerprint of android/ from CI; a newer release with the same one only has web changes.
+        buildConfigField 'String', 'NATIVE_HASH', "\"${System.getenv('NATIVE_HASH') ?: ''}\""
+        // Where the app looks for updates (GitHub Releases and main branch of this repo).
+        buildConfigField 'String', 'UPDATE_REPO', "\"${System.getenv('GITHUB_REPOSITORY') ?: 'kosmet-crypto/GrowPort'}\""
+    }
+
+    // sideload: the APK from GitHub Releases, updates itself (page over the air + in-app APK install).
+    // play: for Google Play, which does not allow apps to update themselves; Play updates it.
+    flavorDimensions = ['dist']
+    productFlavors {
+        sideload {
+            dimension 'dist'
+            buildConfigField 'boolean', 'SELF_UPDATE', 'true'
+        }
+        play {
+            dimension 'dist'
+            buildConfigField 'boolean', 'SELF_UPDATE', 'false'
+        }
+    }
+
+    signingConfigs {
+        // Fixed key committed to the repo so every sideload build can update the installed app.
+        // Google Play uses its own upload key (kept out of the repo) and Play App Signing.
+        release {
+            storeFile file('growport.keystore')
+            storePassword 'growport'
+            keyAlias 'growport'
+            keyPassword 'growport'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
