@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GrowPort</title>
+<!-- Bridge features this page needs from the Android app (WebUpdater.NATIVE_API). Raise it when the page
+     starts calling a new GrowPortAndroid method; older apps then keep their page until the APK is updated. -->
+<meta name="growport-native-api" content="1">
+<meta name="color-scheme" content="light dark">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f3f5f9; --card:#ffffff; --card2:#f7f9fc; --ink:#0e1525; --ink2:#4a5468; --muted:#7c869a;
+  --line:#e3e7ef; --grid:#eceff5; --axis:#c9cfdb; --accent:#2a62d6; --accent-ink:#ffffff;
+  --good:#0a7d32; --bad:#c62f3a; --warn:#a86a00;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#4a3aa7; --s0:#8a93a6;
+  --shadow:0 1px 2px rgba(14,21,37,.06),0 4px 16px rgba(14,21,37,.05);
+  --hero1:#16306e; --hero2:#2a62d6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0b0f1a; --card:#151b2b; --card2:#1a2135; --ink:#f2f5fb; --ink2:#b7c0d3; --muted:#7f8aa3;
+    --line:#232c42; --grid:#1f2740; --axis:#34405c; --accent:#4d85f0; --accent-ink:#ffffff;
+    --good:#34c46a; --bad:#ef6b73; --warn:#e3a33a;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#7f8aa3;
+    --shadow:none; --hero1:#13244f; --hero2:#2552b8;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0b0f1a; --card:#151b2b; --card2:#1a2135; --ink:#f2f5fb; --ink2:#b7c0d3; --muted:#7f8aa3;
+  --line:#232c42; --grid:#1f2740; --axis:#34405c; --accent:#4d85f0; --accent-ink:#ffffff;
+  --good:#34c46a; --bad:#ef6b73; --warn:#e3a33a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#7f8aa3;
+  --shadow:none; --hero1:#13244f; --hero2:#2552b8;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:var(--ink)}
+.wrap{max-width:560px;margin:0 auto;padding:12px 16px 24px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px}
+.brand{font-weight:700;font-size:20px;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+.brand svg{width:26px;height:26px}
+.iconbtn{border:0;background:transparent;padding:8px;border-radius:10px;color:var(--ink2);display:inline-flex}
+.iconbtn:active{background:var(--line)}
+.status{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.hero{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border:0}
+.hero .lbl{opacity:.8;font-size:13px}
+.hero .big{font-size:34px;font-weight:700;letter-spacing:-.5px;margin:2px 0 6px}
+.hero .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.16)}
+.hero .sub{font-size:12px;opacity:.75;margin-top:6px}
+.cmp{padding:4px 16px}
+.cmp .r{padding:11px 0;border-top:1px solid var(--line)}
+.cmp .r:first-child{border-top:0}
+.cmp .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.cmp .t{display:flex;align-items:center;gap:7px;color:var(--ink2);font-size:14px}
+.cmp .v{font-size:17px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmp .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.good{color:var(--good)} .bad{color:var(--bad)} .muted{color:var(--muted)}
+.seg{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:2px}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:8px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--shadow)}
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.chart{position:relative;height:230px;touch-action:pan-y;user-select:none}
+.chart svg{display:block;width:100%;height:100%;overflow:visible}
+.chart .tip{position:absolute;top:0;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);white-space:nowrap;z-index:2}
+.chart .tip b{display:block;margin-bottom:3px;font-size:12px}
+.chart .tip div{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.chart .tip span.n{font-variant-numeric:tabular-nums;font-weight:600;margin-left:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);border-radius:999px;padding:4px 10px;font-size:12.5px;color:var(--ink2)}
+.chip.off{opacity:.45}
+.chip .sw{width:14px;height:3px;border-radius:2px}
+.periods{display:flex;gap:4px;justify-content:center;margin-top:8px}
+.periods button{border:0;background:transparent;color:var(--muted);font-size:12.5px;padding:4px 9px;border-radius:8px}
+.periods button.on{background:var(--card2);color:var(--ink);font-weight:600}
+.empty-chart{height:160px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:0 20px}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);width:100%;font-size:15px}
+.btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line)}
+.btn.small{width:auto;padding:8px 12px;font-size:13px;border-radius:10px}
+.btnrow{display:flex;gap:8px}
+.btnrow .btn{flex:1}
+h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.list{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left}
+.item:first-child{border-top:0}
+.item:active{background:var(--card2)}
+.item .main{flex:1;min-width:0}
+.item .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .right{text-align:right;flex:none}
+.item .val{font-weight:600;font-variant-numeric:tabular-nums}
+.item .chg{font-size:12px}
+.acc-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
+.acc-head .name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);margin-left:4px}
+.badge.warn{color:var(--warn)}
+.ticon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:700;font-size:13px;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:600;font-size:12px;border-top:0}
+th:first-child,td:first-child{text-align:left}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);gap:12px}
+.kv:first-child{border-top:0}
+.kv .k{color:var(--ink2)}
+.kv .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.nav .in{display:flex;max-width:560px;width:100%}
+.nav button{flex:1;border:0;background:transparent;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;color:var(--muted)}
+.nav button.on{color:var(--accent);font-weight:600}
+.nav svg{width:22px;height:22px}
+.page{position:fixed;inset:0;background:var(--bg);z-index:30;overflow-y:auto;padding-bottom:24px}
+.page .top{position:sticky;top:0;background:var(--bg);z-index:3;padding:10px 12px;margin:0}
+.page .title{font-weight:700;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:4px}
+.sheet-bg{position:fixed;inset:0;background:rgba(5,8,16,.5);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;padding:8px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 10px}
+.sheet h3{margin:0 0 12px;font-size:18px}
+label.f{display:block;margin-bottom:12px}
+label.f span{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:5px}
+.inp{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);font-size:16px;outline:none}
+.inp:focus{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:-6px 0 12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.typepick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.typepick button{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:10px 6px;font-size:13px}
+.typepick button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.results{border:1px solid var(--line);border-radius:12px;margin:-4px 0 12px;overflow:hidden}
+.results button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:var(--card2);padding:9px 12px;font-size:13px}
+.results button:first-child{border-top:0}
+.banner{background:var(--card2);border:1px dashed var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--ink2);display:flex;gap:10px;align-items:center;justify-content:space-between}
+.welcome{text-align:center;padding:28px 16px}
+.welcome h1{font-size:22px;margin:12px 0 6px}
+.welcome p{color:var(--ink2);margin:0 0 18px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:60;max-width:90vw}
+.sectnote{font-size:12px;color:var(--muted);margin:6px 4px 12px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="gp-app">
+  <div class="wrap" id="view"></div>
+</div>
+<nav class="nav"><div class="in" id="nav"></div></nav>
+<div id="overlay"></div>
+
+<script>
+'use strict';
+
+/* ================= i18n ================= */
+// [English, Serbian (Cyrillic), Norwegian Bokmål]
+const L = {
+  nav_home:['Overview','Преглед','Oversikt'],
+  nav_holdings:['Holdings','Ставке','Beholdning'],
+  nav_stats:['Statistics','Статистика','Statistikk'],
+  nav_settings:['Settings','Подешавања','Innstillinger'],
+  total_value:['Total value','Укупна вредност','Total verdi'],
+  value:['Value','Вредност','Verdi'],
+  gain:['Gain','Зарада','Avkastning'],
+  gain_since:['since tracking started','од почетка праћења','siden start'],
+  pre_gain:['Gain before tracking: {v}','Зарада пре праћења: {v}','Avkastning før start: {v}'],
+  no_compare:['Add the return (avkastning) to an entry to start the comparison','Унеси avkastning у неки унос да почне поређење','Legg inn avkastning i en registrering for å starte sammenligningen'],
+  vs_bank:['vs bank','Наспрам банке','Mot bank'],
+  vs_btc:['vs Bitcoin','Наспрам BTC','Mot bitcoin'],
+  vs_infl:['vs inflation','Наспрам инфлације','Mot inflasjon'],
+  bank:['Bank','Банка','Bank'],
+  btc:['Bitcoin','Биткоин','Bitcoin'],
+  inflation:['Inflation','Инфлација','Inflasjon'],
+  portfolio:['Portfolio','Портфолио','Portefølje'],
+  invested:['Invested','Уложено','Innskutt'],
+  bigger:['{x}× bigger gain','{x}× већа зарада','{x}× større avkastning'],
+  smaller:['{x}× smaller gain','{x}× мања зарада','{x}× mindre avkastning'],
+  alt_gain:['{n} gain {v}','{n}: зарада {v}','{n}: avkastning {v}'],
+  real_gain:['Real gain after inflation','Стварна зарада после инфлације','Reell avkastning etter inflasjon'],
+  mode_value:['Value','Вредност','Verdi'],
+  mode_diff:['Difference','Разлика','Differanse'],
+  diff_bank:['vs bank','наспрам банке','mot bank'],
+  diff_btc:['vs BTC','наспрам BTC','mot BTC'],
+  diff_infl:['vs inflation','наспрам инфлације','mot inflasjon'],
+  p6m:['6M','6М','6M'], p1y:['1Y','1Г','1Å'], p3y:['3Y','3Г','3Å'], pall:['All','Све','Alt'],
+  chart_empty:['The chart appears after your first entry','График се појављује после првог уноса','Grafen vises etter første registrering'],
+  detailed_stats:['Detailed statistics','Детаљна статистика','Detaljert statistikk'],
+  add_holding:['Add holding','Додај ставку','Legg til'],
+  add_account:['Add account','Додај рачун','Legg til konto'],
+  new_entry:['New entry','Нови унос','Ny registrering'],
+  new_trade:['Buy / sell','Куповина / продаја','Kjøp / salg'],
+  type_fund:['Fund','Фонд','Fond'],
+  type_btc:['Bitcoin','Биткоин','Bitcoin'],
+  type_ticker:['Stock / ETF','Акција / ETF','Aksje / ETF'],
+  type_fund_hint:['Enter value and return (avkastning) from your bank. Deposits are worked out automatically.','Уносиш вредност и avkastning из банке. Уплате се рачунају саме.','Registrer verdi og avkastning fra banken. Innskudd regnes ut automatisk.'],
+  type_btc_hint:['Bitcoin you own. Enter each purchase; the value follows the live price.','Биткоин који поседујеш. Уносиш куповине, вредност прати тренутну цену.','Bitcoin du eier. Registrer hvert kjøp; verdien følger kursen.'],
+  type_ticker_hint:['Stock or ETF with a live price (Yahoo Finance symbol).','Акција или ETF са тренутном ценом (Yahoo Finance ознака).','Aksje eller ETF med kurs (Yahoo Finance-symbol).'],
+  name:['Name','Назив','Navn'],
+  account:['Account','Рачун','Konto'],
+  currency:['Currency','Валута','Valuta'],
+  symbol:['Symbol','Ознака','Symbol'],
+  search:['Search','Претражи','Søk'],
+  search_hint:['e.g. SXR8.DE, AAPL, EQNR.OL','нпр. SXR8.DE, AAPL, EQNR.OL','f.eks. SXR8.DE, AAPL, EQNR.OL'],
+  no_results:['No results (check your connection)','Нема резултата (провери везу)','Ingen treff (sjekk nettet)'],
+  date:['Date','Датум','Dato'],
+  ret:['Return (avkastning)','Avkastning (зарада)','Avkastning'],
+  ret_hint:['Optional. Without it the entry only shows on the chart, not in comparisons.','Није обавезно. Без тога унос се види на графику, али не улази у поређење.','Valgfritt. Uten den vises registreringen bare i grafen, ikke i sammenligningen.'],
+  paid_in:['Paid in: {v}','Уплаћено: {v}','Innskutt: {v}'],
+  buy:['Buy','Куповина','Kjøp'], sell:['Sell','Продаја','Salg'],
+  qty_btc:['Amount of BTC','Количина BTC','Antall BTC'],
+  amount_paid:['Total paid (incl. fee)','Укупно плаћено (са провизијом)','Totalt betalt (inkl. gebyr)'],
+  amount_got:['Total received','Укупно добијено','Totalt mottatt'],
+  qty:['Quantity','Количина','Antall'],
+  price_unit:['Price per unit','Цена по комаду','Kurs per andel'],
+  fee:['Fee','Провизија','Gebyr'],
+  save:['Save','Сачувај','Lagre'],
+  cancel:['Cancel','Откажи','Avbryt'],
+  del:['Delete','Обриши','Slett'],
+  edit:['Edit','Измени','Rediger'],
+  confirm_del:['Delete this?','Обрисати ово?','Slette dette?'],
+  confirm_del_holding:['Delete this holding and all its entries?','Обрисати ставку и све њене уносе?','Slette beholdningen og alle registreringene?'],
+  acc_not_empty:['Move or delete the holdings in this account first','Прво премести или обриши ставке са овог рачуна','Flytt eller slett beholdningene i kontoen først'],
+  entries:['Entries','Уноси','Registreringer'],
+  trades:['Purchases and sales','Куповине и продаје','Kjøp og salg'],
+  no_entries:['No entries yet','Још нема уноса','Ingen registreringer ennå'],
+  stale:['last entry {d} days ago','последњи унос пре {d} дана','siste registrering for {d} dager siden'],
+  history_only:['history only','само историја','kun historikk'],
+  missing_fx:['exchange rate missing','недостаје курс','mangler valutakurs'],
+  missing_price:['price missing','недостаје цена','mangler kurs'],
+  total:['Total','Укупно','Totalt'],
+  scope:['Show','Приказ','Vis'],
+  annual:['Annual return (XIRR)','Годишњи принос (XIRR)','Årlig avkastning (XIRR)'],
+  total_ret:['Total return','Укупни принос','Total avkastning'],
+  gain_nom:['Gain','Зарада','Avkastning'],
+  maxdd:['Largest drop from peak','Највећи пад од врха','Største fall fra topp'],
+  started:['Comparison since','Поређење од','Sammenligning fra'],
+  per_holding:['By holding','По ставкама','Per beholdning'],
+  monthly:['By month','По месецима','Per måned'],
+  month:['Month','Месец','Måned'],
+  deposits:['Deposits','Уплате','Innskudd'],
+  show_all:['Show all','Прикажи све','Vis alle'],
+  too_short:['— (under 30 days)','— (краће од 30 дана)','— (under 30 dager)'],
+  lang:['Language','Језик','Språk'],
+  theme:['Theme','Тема','Tema'],
+  th_system:['System','Системска','System'], th_light:['Light','Светла','Lys'], th_dark:['Dark','Тамна','Mørk'],
+  base_cur:['Main currency','Главна валута','Hovedvaluta'],
+  savings:['Savings comparison','Поређење са штедњом','Sammenligning med sparing'],
+  sav_rate:['Default interest rate (% per year)','Подразумевана камата (% годишње)','Standard rente (% per år)'],
+  sav_hint:['Interest is credited on the 1st of each month.','Камата се приписује 1. у месецу.','Renter godskrives den 1. hver måned.'],
+  rate_changes:['Rate changes','Промене камате','Renteendringer'],
+  rate_from:['From month','Од месеца','Fra måned'],
+  rate_hint:['A change applies from that month until the next change.','Промена важи од тог месеца до следеће промене.','En endring gjelder fra den måneden til neste endring.'],
+  add_rate:['Add rate change','Додај промену камате','Legg til renteendring'],
+  btc_fee:['Bitcoin purchase fee (%)','Провизија за куповину BTC (%)','Gebyr ved kjøp av bitcoin (%)'],
+  infl_src:['Inflation','Инфлација','Inflasjon'],
+  infl_auto:['Statistics Norway (KPI)','Статистика Норвешке (KPI)','SSB (KPI)'],
+  infl_fixed:['Fixed rate','Фиксна стопа','Fast sats'],
+  infl_rate:['Fixed inflation (% per year)','Фиксна инфлација (% годишње)','Fast inflasjon (% per år)'],
+  infl_hint:['KPI is used when the main currency is NOK; otherwise, or while offline, the fixed rate.','KPI се користи кад је главна валута NOK, иначе (или без интернета) фиксна стопа.','KPI brukes når hovedvaluta er NOK; ellers, eller uten nett, fast sats.'],
+  accounts:['Accounts','Рачуни','Kontoer'],
+  data:['Data','Подаци','Data'],
+  export:['Export backup','Извези бекап','Eksporter sikkerhetskopi'],
+  import:['Import backup','Увези бекап','Importer sikkerhetskopi'],
+  import_ok:['Backup imported','Бекап је увезен','Sikkerhetskopi importert'],
+  import_bad:['This file is not a GrowPort backup','Овај фајл није GrowPort бекап','Filen er ikke en GrowPort-sikkerhetskopi'],
+  import_confirm:['Replace all current data with this backup?','Заменити све тренутне податке овим бекапом?','Erstatte alle data med denne sikkerhetskopien?'],
+  saved:['Saved','Сачувано','Lagret'],
+  demo:['Load example data','Учитај пример','Last inn eksempeldata'],
+  demo_on:['You are looking at example data.','Гледаш пример података.','Du ser på eksempeldata.'],
+  demo_clear:['Clear','Обриши','Fjern'],
+  wipe:['Delete all data','Обриши све податке','Slett alle data'],
+  wipe_confirm:['Delete all data? Export a backup first if you need it.','Обрисати све податке? Прво извези бекап ако ти треба.','Slette alle data? Eksporter en sikkerhetskopi først om du trenger den.'],
+  market:['Market data','Тржишни подаци','Markedsdata'],
+  refresh:['Refresh','Освежи','Oppdater'],
+  updated_at:['Updated {t}','Ажурирано {t}','Oppdatert {t}'],
+  updating:['Updating prices…','Ажурирам цене…','Oppdaterer kurser…'],
+  offline:['Offline – using saved prices','Нема везе – користе се сачуване цене','Frakoblet – bruker lagrede kurser'],
+  partial:['Some prices could not be updated','Неке цене нису ажуриране','Noen kurser ble ikke oppdatert'],
+  about:['About','О апликацији','Om'],
+  version:['Version','Верзија','Versjon'],
+  check_updates:['Check for updates','Провери ажурирања','Se etter oppdateringer'],
+  welcome_title:['Welcome to GrowPort','Добродошао у GrowPort','Velkommen til GrowPort'],
+  welcome_text:['Track your funds and see how they compare with a savings account, Bitcoin and inflation.','Прати своје фондове и види како стоје у односу на штедњу, биткоин и инфлацију.','Følg fondene dine og se hvordan de står mot sparekonto, bitcoin og inflasjon.'],
+  default_account:['My account','Мој рачун','Min konto'],
+  btc_price_now:['BTC now: {v}','BTC сада: {v}','BTC nå: {v}'],
+  required:['Fill in the required fields','Попуни обавезна поља','Fyll ut feltene'],
+  compare_note:['Differences compare your gain with what the same deposits would have earned in the bank, in Bitcoin, or just keeping up with inflation.','Разлике пореде твоју зараду са оним што би исте уплате зарадиле у банци, у биткоину, или колико треба да прате инфлацију.','Differansene sammenligner avkastningen din med hva de samme innskuddene ville gitt i banken, i bitcoin, eller bare for å holde tritt med inflasjonen.'],
+  btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
+  none:['—','—','—'],
+  ok:['OK','У реду','OK']
+};
+const LOCALES = {en:'en-GB', sr:'sr-Cyrl-RS', no:'nb-NO'};
+const CURRENCIES = ['NOK','EUR','USD','SEK','DKK','GBP','CHF'];
+
+let D, C, UI;
+function lang(){ return (D && D.settings.language) || 'en'; }
+function t(k, vars){
+  const row = L[k]; let s = row ? row[{en:0,sr:1,no:2}[lang()] || 0] : k;
+  if(vars) for(const v in vars) s = s.split('{'+v+'}').join(vars[v]);
+  return s;
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= storage ================= */
+const LS_DATA = 'growport.data.v1', LS_CACHE = 'growport.cache.v1', LS_UI = 'growport.ui.v1';
+const NATIVE = window.GrowPortAndroid || null;
+
+function defaultData(){
+  return {
+    schema: 1,
+    settings: {baseCurrency:'NOK', language:'en', theme:'system', savingsRate:0.035, btcFee:0.01, inflSource:'auto', inflRate:0.03},
+    rateChanges: [], accounts: [], holdings: [], entries: [], trades: []
+  };
+}
+function normalize(d){
+  if(!d || typeof d !== 'object' || d.schema !== 1) return null;
+  const n = defaultData();
+  n.settings = Object.assign(n.settings, d.settings || {});
+  for(const k of ['rateChanges','accounts','holdings','entries','trades']) n[k] = Array.isArray(d[k]) ? d[k] : [];
+  if(d.demo) n.demo = true;
+  return n;
+}
+function loadJSON(key){ try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+function saveData(){
+  try{ localStorage.setItem(LS_DATA, JSON.stringify(D)); }catch(e){ toast('Storage full'); }
+  engine = null;
+}
+function saveCache(){ try{ localStorage.setItem(LS_CACHE, JSON.stringify(C)); }catch(e){} }
+function saveUI(){ try{ localStorage.setItem(LS_UI, JSON.stringify(UI)); }catch(e){} }
+function emptyCache(){ return {fx:{}, fxSyms:'', fxYears:{}, btc:{}, btcAt:0, tick:{}, cpi:{}, cpiAt:0, at:0}; }
+
+function uid(){ return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+
+/* ================= dates & numbers ================= */
+const DAY = 864e5;
+const dnum = s => Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) / DAY;
+const dstr = n => new Date(n * DAY).toISOString().slice(0, 10);
+function todayStr(){ const d = new Date(); return dstr(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY); }
+function parseNum(s){
+  if(typeof s === 'number') return s;
+  s = String(s || '').trim().replace(/[\s  ']/g, '');
+  if(!s) return NaN;
+  // "1.234,56" or "1,234.56" or "1234,5"
+  if(s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',', '.') : s.replace(/,/g,'');
+  else s = s.replace(',', '.');
+  return Number(s);
+}
+function loc(){ return LOCALES[lang()] || 'en-GB'; }
+function fmtMoney(v, opts = {}){
+  if(v == null || !isFinite(v)) return t('none');
+  const cur = opts.cur || D.settings.baseCurrency;
+  const digits = opts.digits != null ? opts.digits : (Math.abs(v) < 100 ? 2 : 0);
+  try{
+    return new Intl.NumberFormat(loc(), {style:'currency', currency:cur, minimumFractionDigits:digits, maximumFractionDigits:digits, signDisplay: opts.sign ? 'exceptZero' : 'auto'}).format(v);
+  }catch(e){ return (opts.sign && v > 0 ? '+' : '') + v.toFixed(digits) + ' ' + cur; }
+}
+function fmtNum(v, digits = 2){
+  if(v == null || !isFinite(v)) return t('none');
+  return new Intl.NumberFormat(loc(), {maximumFractionDigits:digits}).format(v);
+}
+// Numbers put into inputs: no grouping, decimal comma for Serbian and Norwegian (parseNum reads both).
+function fmtInput(v){
+  if(v === '' || v == null || !isFinite(v)) return '';
+  const str = String(+(+v).toFixed(8));
+  return lang() === 'en' ? str : str.replace('.', ',');
+}
+function fmtCompact(v){
+  return new Intl.NumberFormat(loc(), {notation:'compact', maximumFractionDigits: Math.abs(v) < 10 ? 1 : 0}).format(v);
+}
+function fmtPct(v, sign = true){
+  if(v == null || !isFinite(v)) return t('none');
+  return new Intl.NumberFormat(loc(), {style:'percent', minimumFractionDigits:1, maximumFractionDigits:1, signDisplay: sign ? 'exceptZero' : 'auto'}).format(v);
+}
+function fmtDate(s, opts){ return new Intl.DateTimeFormat(loc(), opts || {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'}).format(new Date(dnum(s) * DAY)); }
+function fmtMonth(mk){ return new Intl.DateTimeFormat(loc(), {month:'short', year:'numeric', timeZone:'UTC'}).format(new Date(dnum(mk + '-01') * DAY)); }
+function signCls(v){ return v > 0.005 ? 'good' : v < -0.005 ? 'bad' : 'muted'; }
+function arrow(v){ return v > 0.005 ? '▲ ' : v < -0.005 ? '▼ ' : ''; }
+
+/* ================= network ================= */
+const pendingHttp = {}; let httpSeq = 0;
+window.GP_httpDone = function(id, status, body){ const cb = pendingHttp[id]; if(cb){ delete pendingHttp[id]; cb(status, body); } };
+// Android fetches through the app (no CORS limits); in a browser plain fetch is used.
+function http(url, opts = {}){
+  if(NATIVE && NATIVE.http){
+    return new Promise((resolve, reject) => {
+      const id = ++httpSeq;
+      const timer = setTimeout(() => { delete pendingHttp[id]; reject(new Error('timeout')); }, 40000);
+      pendingHttp[id] = (status, body) => { clearTimeout(timer); status >= 200 && status < 300 ? resolve(body) : reject(new Error('HTTP ' + status)); };
+      NATIVE.http(id, opts.method || 'GET', url, opts.body || '', opts.type || '');
+    });
+  }
+  return fetch(url, {method: opts.method || 'GET', body: opts.body, headers: opts.type ? {'Content-Type': opts.type} : undefined})
+    .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+}
+async function getJSON(urls, opts){
+  let err;
+  for(const u of [].concat(urls)){
+    try{ return JSON.parse(await http(u, opts)); }catch(e){ err = e; }
+  }
+  throw err || new Error('failed');
+}
+
+/* ================= market data ================= */
+// Exchange rates: ECB reference rates (via Frankfurter), per EUR, one request per year.
+async function updateFx(fromYear){
+  const need = new Set(['USD', D.settings.baseCurrency]);
+  D.holdings.forEach(h => { if(h.currency) need.add(h.currency); });
+  need.delete('EUR');
+  const syms = [...need].sort().join(',');
+  if(!syms) return;
+  if(C.fxSyms !== syms){ C.fx = {}; C.fxYears = {}; C.fxSyms = syms; }
+  const thisYear = +todayStr().slice(0, 4);
+  for(let y = Math.max(fromYear, 1999); y <= thisYear; y++){
+    const fetched = C.fxYears[y];
+    if(fetched && (y < thisYear || Date.now() - fetched < 6 * 3600e3)) continue;
+    const range = `${y}-01-01..${y}-12-31`;
+    const j = await getJSON([
+      `https://api.frankfurter.dev/v1/${range}?base=EUR&symbols=${syms}`,
+      `https://api.frankfurter.app/${range}?from=EUR&to=${syms}`
+    ]);
+    if(!j || !j.rates) throw new Error('fx');
+    Object.assign(C.fx, j.rates);
+    C.fxYears[y] = Date.now();
+  }
+}
+
+// Bitcoin daily close in USD. Binance (public market-data mirror first), Coinbase as fallback.
+async function updateBtc(fromN){
+  const T = dnum(todayStr());
+  const have = Object.keys(C.btc).sort();
+  const firstHave = have.length ? dnum(have[0]) : null;
+  let start = fromN;
+  if(firstHave != null && fromN >= firstHave) start = Math.max(fromN, dnum(have[have.length - 1]) - 2);
+  else if(firstHave != null) C.btc = {};   // need older history: refetch all
+  start = Math.max(start, dnum('2017-08-17'));
+  if(Date.now() - C.btcAt < 15 * 60e3 && have.length && start >= T - 2) return;
+  try{
+    let s = start;
+    for(let guard = 0; s <= T && guard < 20; guard++){
+      const rows = await getJSON([
+        `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=${s * DAY}&limit=1000`,
+        `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&startTime=${s * DAY}&limit=1000`
+      ]);
+      if(!Array.isArray(rows) || !rows.length) break;
+      rows.forEach(r => { C.btc[dstr(Math.floor(r[0] / DAY))] = +r[4]; });
+      s = Math.floor(rows[rows.length - 1][0] / DAY) + 1;
+      if(rows.length < 1000) break;
+    }
+  }catch(e){
+    // Coinbase: 300 candles per request, [time, low, high, open, close, volume], newest first.
+    for(let s = start; s <= T; s += 300){
+      const e2 = Math.min(s + 299, T);
+      const rows = await getJSON(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400&start=${dstr(s)}T00:00:00Z&end=${dstr(e2)}T23:59:59Z`);
+      if(!Array.isArray(rows)) throw new Error('btc');
+      rows.forEach(r => { C.btc[dstr(Math.floor(r[0] * 1000 / DAY))] = +r[4]; });
+    }
+  }
+  C.btcAt = Date.now();
+}
+
+function yahooHosts(path){ return ['https://query1.finance.yahoo.com' + path, 'https://query2.finance.yahoo.com' + path]; }
+function normQuote(cur, v){ return cur === 'GBp' || cur === 'GBX' ? v / 100 : v; }
+function normCur(cur){ return cur === 'GBp' || cur === 'GBX' ? 'GBP' : cur; }
+async function fetchTicker(sym, fromN){
+  const p1 = Math.max(0, (fromN - 7) * 86400), p2 = Math.floor(Date.now() / 1000) + 86400;
+  const j = await getJSON(yahooHosts(`/v8/finance/chart/${encodeURIComponent(sym)}?period1=${p1}&period2=${p2}&interval=1d&includePrePost=false`));
+  const r = j && j.chart && j.chart.result && j.chart.result[0];
+  if(!r || !r.timestamp) throw new Error('ticker');
+  const rawCur = r.meta && r.meta.currency || 'USD';
+  const off = (r.meta && r.meta.gmtoffset) || 0;
+  const close = r.indicators && r.indicators.quote && r.indicators.quote[0] && r.indicators.quote[0].close || [];
+  const prices = {};
+  r.timestamp.forEach((ts, i) => { const c = close[i]; if(c != null && isFinite(c)) prices[dstr(Math.floor((ts + off) * 1000 / DAY))] = normQuote(rawCur, c); });
+  if(r.meta && r.meta.regularMarketPrice && r.meta.regularMarketTime){
+    prices[dstr(Math.floor((r.meta.regularMarketTime + off) * 1000 / DAY))] = normQuote(rawCur, r.meta.regularMarketPrice);
+  }
+  return {currency: normCur(rawCur), name: r.meta && (r.meta.shortName || r.meta.longName) || sym, prices};
+}
+async function searchTicker(q){
+  const j = await getJSON(yahooHosts(`/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0`));
+  return (j && j.quotes || []).filter(x => x.symbol).map(x => ({symbol:x.symbol, name:x.shortname || x.longname || x.symbol, exch:x.exchDisp || x.exchange || '', type:x.quoteType || ''}));
+}
+async function updateTickers(){
+  let failed = false;
+  for(const h of D.holdings.filter(h => h.type === 'ticker' && h.symbol)){
+    const first = firstDateOf(h);
+    const c = C.tick[h.symbol];
+    if(c && Date.now() - c.at < 15 * 60e3 && (!first || c.from <= dnum(first))) continue;
+    try{
+      const from = first ? dnum(first) : dnum(todayStr()) - 30;
+      const r = await fetchTicker(h.symbol, from);
+      C.tick[h.symbol] = {currency:r.currency, prices:r.prices, at:Date.now(), from};
+    }catch(e){ failed = true; }
+  }
+  if(failed) throw new Error('ticker');
+}
+
+// Consumer price index from Statistics Norway (table 03013), monthly.
+async function updateCpi(){
+  if(Date.now() - C.cpiAt < 24 * 3600e3 && Object.keys(C.cpi).length) return;
+  const url = 'https://data.ssb.no/api/v0/no/table/03013/';
+  const mk = withGroup => JSON.stringify({query: [
+    ...(withGroup ? [{code:'Konsumgrp', selection:{filter:'item', values:['TOTAL']}}] : []),
+    {code:'ContentsCode', selection:{filter:'item', values:['KpiIndMnd']}},
+    {code:'Tid', selection:{filter:'top', values:['300']}}
+  ], response:{format:'json-stat2'}});
+  let j;
+  try{ j = await getJSON(url, {method:'POST', body:mk(true), type:'application/json'}); }
+  catch(e){ j = await getJSON(url, {method:'POST', body:mk(false), type:'application/json'}); }
+  const idx = j && j.dimension && j.dimension.Tid && j.dimension.Tid.category && j.dimension.Tid.category.index;
+  if(!idx || !Array.isArray(j.value)) throw new Error('cpi');
+  const out = {};
+  const pairs = Array.isArray(idx) ? idx.map((k, i) => [k, i]) : Object.entries(idx);
+  pairs.forEach(([k, i]) => { const v = j.value[i]; if(v != null) out[k.replace('M', '-')] = +v; });
+  if(!Object.keys(out).length) throw new Error('cpi');
+  C.cpi = out; C.cpiAt = Date.now();
+}
+
+function firstDateOf(h){
+  let m = null;
+  for(const e of D.entries) if(e.holdingId === h.id && (!m || e.date < m)) m = e.date;
+  for(const e of D.trades) if(e.holdingId === h.id && (!m || e.date < m)) m = e.date;
+  return m;
+}
+function earliestDate(){
+  let m = null;
+  for(const e of D.entries) if(!m || e.date < m) m = e.date;
+  for(const e of D.trades) if(!m || e.date < m) m = e.date;
+  return m;
+}
+
+let refreshing = null, marketStatus = '';
+function refreshMarket(force){
+  if(refreshing) return refreshing;
+  if(force){ C.btcAt = 0; for(const k in C.tick) C.tick[k].at = 0; C.cpiAt = 0; const y = todayStr().slice(0,4); delete C.fxYears[y]; }
+  const first = earliestDate() || todayStr();
+  const fromN = dnum(first) - 7;
+  marketStatus = 'updating'; renderStatus();
+  const jobs = [updateFx(+dstr(fromN).slice(0, 4)), updateBtc(fromN), updateTickers()];
+  if(D.settings.inflSource === 'auto' && D.settings.baseCurrency === 'NOK') jobs.push(updateCpi());
+  refreshing = Promise.allSettled(jobs).then(res => {
+    const bad = res.filter(r => r.status === 'rejected').length;
+    marketStatus = bad === 0 ? 'ok' : bad === res.length ? 'offline' : 'partial';
+    if(bad < res.length) C.at = Date.now();
+    saveCache(); engine = null; refreshing = null; render();
+  });
+  return refreshing;
+}
+
+/* ================= calculation engine ================= */
+function makeSeries(obj){
+  const keys = Object.keys(obj).sort();
+  const ns = keys.map(dnum), vs = keys.map(k => obj[k]);
+  return {
+    n: ns.length, first: ns[0], last: ns[ns.length - 1],
+    // Last value on or before day n (carried over weekends and holidays); null before the first value.
+    at(n){
+      if(!ns.length || n < ns[0]) return null;
+      let lo = 0, hi = ns.length - 1;
+      while(lo < hi){ const m = (lo + hi + 1) >> 1; if(ns[m] <= n) lo = m; else hi = m - 1; }
+      return vs[lo];
+    },
+    atOrFirst(n){ const v = this.at(n); return v == null && ns.length ? vs[0] : v; }
+  };
+}
+
+let engine = null;
+function getEngine(){ if(!engine) engine = buildEngine(); return engine; }
+
+function buildEngine(){
+  const base = D.settings.baseCurrency;
+  const T = dnum(todayStr());
+  const first = earliestDate();
+  const N0 = first ? Math.min(dnum(first), T) : T;
+  const len = T - N0 + 1;
+  const fxS = makeSeries(C.fx), btcS = makeSeries(C.btc);
+  const cpiS = makeSeries(Object.fromEntries(Object.entries(C.cpi).map(([k, v]) => [k + '-01', v])));
+  const useCpi = D.settings.inflSource === 'auto' && base === 'NOK' && cpiS.n > 0;
+  const fee = D.settings.btcFee;
+
+  // Multiplier converting 1 unit of `cur` into the main currency on day n (ECB rates are per EUR).
+  function fx(cur, n){
+    if(!cur || cur === base) return 1;
+    const r = fxS.atOrFirst(n);
+    if(!r) return null;
+    const rc = cur === 'EUR' ? 1 : r[cur], rb = base === 'EUR' ? 1 : r[base];
+    return rc && rb ? rb / rc : null;
+  }
+  function btcPrice(n){
+    const u = btcS.at(n);
+    if(u == null) return null;
+    const m = fx('USD', n);
+    return m == null ? null : u * m;
+  }
+  const rates = D.rateChanges.slice().sort((a, b) => a.month < b.month ? -1 : 1);
+  const rateCache = {};
+  function rateFor(n){
+    const mk = dstr(n).slice(0, 7);
+    if(mk in rateCache) return rateCache[mk];
+    let r = D.settings.savingsRate;
+    for(const c of rates) if(c.month <= mk) r = c.rate;
+    return rateCache[mk] = r;
+  }
+  // Price level used for the inflation line: CPI (monthly) or a fixed yearly rate.
+  const infl = D.settings.inflRate;
+  function level(n){
+    if(useCpi){
+      const v = cpiS.at(dnum(dstr(n).slice(0, 7) + '-01'));
+      if(v != null) return v;
+      return cpiS.atOrFirst(cpiS.first) / Math.pow(1 + infl, (cpiS.first - n) / 365.25);
+    }
+    return Math.pow(1 + infl, (n - N0) / 365.25);
+  }
+
+  const results = [];
+  for(const h of D.holdings){
+    const r = h.type === 'fund' ? computeFund(h) : computeTrades(h);
+    if(r) results.push(r);
+  }
+
+  function blank(){ return new Array(len).fill(null); }
+
+  function computeFund(h){
+    const cur = h.currency || base;
+    const es = D.entries.filter(e => e.holdingId === h.id && dnum(e.date) <= T)
+      .map(e => ({n:dnum(e.date), v:e.value, ret:e.ret}))
+      .sort((a, b) => a.n - b.n);
+    if(!es.length) return null;
+    const res = {h, act:blank(), inv:blank(), sav:blank(), btc:blank(), inf:blank(), tracked:blank(),
+      dots:es.map(e => e.n - N0), flows:[], i0:null, startCap:0, preGain:0, warn:null, lastEntry:es[es.length - 1].n};
+    let j = 0;
+    for(let i = 0; i < len; i++){
+      const n = N0 + i;
+      if(n < es[0].n) continue;
+      while(j + 1 < es.length && es[j + 1].n <= n) j++;
+      let v = es[j].v;
+      if(j + 1 < es.length){ const a = es[j], b = es[j + 1]; v = a.v + (b.v - a.v) * (n - a.n) / (b.n - a.n); }
+      const m = fx(cur, n);
+      if(m == null){ res.warn = 'fx'; return res; }
+      res.act[i] = v * m;
+    }
+    const full = es.filter(e => e.ret != null && isFinite(e.ret));
+    if(full.length){
+      const f0 = full[0];
+      const m0 = fx(cur, f0.n);
+      res.startCap = f0.v * m0;
+      res.preGain = f0.ret * m0;
+      for(let k = 1; k < full.length; k++){
+        const d = (full[k].v - full[k].ret) - (full[k - 1].v - full[k - 1].ret);
+        if(Math.abs(d) > 0.005) res.flows.push({n:full[k].n, amt:d * fx(cur, full[k].n)});
+      }
+      simulate(res, f0.n - N0, false);
+    } else fillHistory(res, len);
+    return res;
+  }
+
+  function computeTrades(h){
+    const isBtc = h.type === 'btc';
+    const cur = isBtc ? (h.currency || base) : (h.currency || (C.tick[h.symbol] && C.tick[h.symbol].currency) || base);
+    const ts = D.trades.filter(e => e.holdingId === h.id && dnum(e.date) <= T)
+      .map(e => ({n:dnum(e.date), side:e.side, qty:+e.qty || 0, amount:+e.amount || 0, price:+e.price || 0, fee:+e.fee || 0}))
+      .sort((a, b) => a.n - b.n);
+    if(!ts.length) return null;
+    const res = {h, act:blank(), inv:blank(), sav:blank(), btc:blank(), inf:blank(), tracked:blank(),
+      dots:ts.map(e => e.n - N0), flows:[], i0:null, startCap:0, preGain:0, warn:null, isBtc, cur};
+    for(const e of ts){
+      const m = fx(cur, e.n);
+      if(m == null){ res.warn = 'fx'; return res; }
+      const gross = isBtc ? e.amount : e.qty * e.price + (e.side === 'sell' ? -e.fee : e.fee);
+      res.flows.push({n:e.n, amt:(e.side === 'sell' ? -gross : gross) * m});
+    }
+    const tick = !isBtc && C.tick[h.symbol] ? makeSeries(C.tick[h.symbol].prices) : null;
+    let qty = 0, k = 0, lastPrice = null;
+    for(let i = 0; i < len; i++){
+      const n = N0 + i;
+      while(k < ts.length && ts[k].n <= n){
+        const e = ts[k++];
+        qty += e.side === 'sell' ? -e.qty : e.qty;
+        const unit = isBtc ? (e.qty ? e.amount / e.qty : null) : e.price;
+        if(unit) lastPrice = {unit, n:e.n};
+      }
+      if(n < ts[0].n) continue;
+      let p;
+      if(isBtc) p = btcPrice(n);
+      else { const q = tick && tick.at(n); const m = fx(cur, n); p = q != null && m != null ? q * m : null; }
+      if(p == null && lastPrice){ const m = isBtc ? fx(cur, lastPrice.n) : fx(cur, n); if(m != null){ p = lastPrice.unit * m; res.warn = res.warn || 'price'; } }
+      res.act[i] = p == null ? null : qty * p;
+    }
+    simulate(res, ts[0].n - N0, isBtc);
+    return res;
+  }
+
+  function fillHistory(res){
+    for(let i = 0; i < len; i++){ const a = res.act[i]; res.inv[i] = res.sav[i] = res.btc[i] = res.inf[i] = a; }
+  }
+
+  // Hypothetical savings account, Bitcoin and inflation fed with the same money on the same days.
+  function simulate(res, i0, selfBtc){
+    res.i0 = i0;
+    for(let i = 0; i < i0; i++){ const a = res.act[i]; res.inv[i] = res.sav[i] = res.btc[i] = res.inf[i] = a; }
+    const n0 = N0 + i0;
+    let bal = res.startCap, acc = 0, inv = res.startCap, fi = 0;
+    const p0 = btcPrice(n0);
+    let coins = p0 ? res.startCap * (1 - fee) / p0 : (res.startCap ? null : 0);
+    let real = res.startCap / level(n0);
+    for(let i = i0; i < len; i++){
+      const n = N0 + i;
+      if(i > i0 && dstr(n).endsWith('-01')){ bal += acc; acc = 0; }
+      while(fi < res.flows.length && res.flows[fi].n <= n){
+        const f = res.flows[fi++].amt;
+        bal += f; inv += f; real += f / level(n);
+        if(coins != null){ const p = btcPrice(n); coins = p ? coins + (f > 0 ? f * (1 - fee) : f) / p : null; }
+      }
+      acc += bal * rateFor(n) / 365;
+      res.sav[i] = bal;
+      res.inv[i] = inv;
+      res.inf[i] = real * level(n);
+      if(selfBtc) res.btc[i] = res.act[i];
+      else { const p = btcPrice(n); res.btc[i] = coins != null && p ? coins * p : null; }
+      res.tracked[i] = res.act[i] != null;
+    }
+  }
+
+  const aggCache = {};
+  function aggregate(key, filter){
+    if(aggCache[key]) return aggCache[key];
+    const rs = results.filter(filter);
+    const z = () => new Array(len).fill(null);
+    const A = {rs, act:z(), inv:z(), sav:z(), btc:z(), inf:z(),
+      tAct:z(), tInv:z(), tSav:z(), tBtc:z(), tInf:z(), dots:new Set(), flows:[], preGain:0, n0:null, btcOk:true};
+    const add = (arr, i, v) => { arr[i] = (arr[i] || 0) + v; };
+    for(const r of rs){
+      if(r.warn === 'fx') continue;
+      r.dots.forEach(d => A.dots.add(d));
+      if(r.i0 != null){
+        A.preGain += r.preGain;
+        const n0 = N0 + r.i0;
+        if(A.n0 == null || n0 < A.n0) A.n0 = n0;
+        if(r.startCap) A.flows.push({n:n0, amt:r.startCap});
+        A.flows.push(...r.flows);
+      }
+      for(let i = 0; i < len; i++){
+        const a = r.act[i];
+        if(a == null) continue;
+        add(A.act, i, a); add(A.inv, i, r.inv[i] ?? a); add(A.sav, i, r.sav[i] ?? a); add(A.inf, i, r.inf[i] ?? a);
+        if(r.btc[i] == null) A.btcOk = false; else add(A.btc, i, r.btc[i]);
+        if(r.tracked[i]){
+          add(A.tAct, i, a); add(A.tInv, i, r.inv[i]); add(A.tSav, i, r.sav[i]); add(A.tInf, i, r.inf[i]);
+          if(r.btc[i] != null) add(A.tBtc, i, r.btc[i]);
+        }
+      }
+    }
+    if(!A.btcOk){ A.btc = z(); A.tBtc = z(); }
+    A.flows.sort((a, b) => a.n - b.n);
+    A.firstIdx = A.act.findIndex(v => v != null);
+    return aggCache[key] = A;
+  }
+
+  return {
+    N0, len, T, results, fx, btcPrice,
+    total(){ return aggregate('total', () => true); },
+    account(id){ return aggregate('a:' + id, r => r.h.accountId === id); },
+    holding(id){ return aggregate('h:' + id, r => r.h.id === id); },
+    result(id){ return results.find(r => r.h.id === id); }
+  };
+}
+
+// Headline numbers for an aggregate on its last day.
+function metrics(A){
+  const E = getEngine(), i = E.len - 1;
+  const value = A.act[i];
+  if(value == null) return null;
+  const inv = A.tInv[i], tracked = inv != null && inv !== 0;
+  const g = tracked ? A.tAct[i] - inv : null;
+  const out = {value, tracked, inv, gain:g, gainPct: tracked && inv > 0 ? g / inv : null, preGain:A.preGain, n0:A.n0};
+  if(tracked){
+    out.bankGain = A.tSav[i] - inv;
+    out.btcGain = A.btcOk && A.tBtc[i] != null ? A.tBtc[i] - inv : null;
+    out.inflGain = A.tInf[i] - inv;
+    out.bankPct = inv > 0 ? out.bankGain / inv : null;
+    out.btcPct = out.btcGain != null && inv > 0 ? out.btcGain / inv : null;
+    out.inflPct = inv > 0 ? out.inflGain / inv : null;
+  }
+  return out;
+}
+function ratioText(g, alt){
+  if(g == null || alt == null || !(g > 0) || !(alt > 0)) return '';
+  const r = g / alt;
+  if(Math.abs(r - 1) < 0.05) return '≈ 1×';
+  return r > 1 ? t('bigger', {x:fmtNum(r, 1)}) : t('smaller', {x:fmtNum(1 / r, 1)});
+}
+
+// Money-weighted annual return: deposits negative, today's value positive.
+function xirr(flows, finalN, finalValue){
+  const cfs = flows.map(f => ({n:f.n, v:-f.amt})).concat([{n:finalN, v:finalValue}]);
+  if(cfs.length < 2) return null;
+  const n0 = cfs[0].n;
+  if(finalN - n0 < 30) return 'short';
+  const npv = r => cfs.reduce((s, c) => s + c.v / Math.pow(1 + r, (c.n - n0) / 365), 0);
+  let lo = -0.99, hi = 10, flo = npv(lo), fhi = npv(hi);
+  if(flo * fhi > 0) return null;
+  for(let k = 0; k < 200; k++){
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if(Math.abs(fm) < 1e-7) return mid;
+    if(flo * fm < 0){ hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+  }
+  return (lo + hi) / 2;
+}
+// Largest fall from a peak of the time-weighted index (deposits don't count as growth).
+function maxDrawdown(A){
+  let idx = 1, peak = 1, dd = 0, prevAct = null, prevInv = null;
+  for(let i = 0; i < A.act.length; i++){
+    const a = A.act[i], v = A.inv[i];
+    if(a == null){ prevAct = null; continue; }
+    if(prevAct != null && prevAct > 0){
+      const flow = (v ?? a) - (prevInv ?? 0);
+      const r = (a - flow) / prevAct;
+      if(isFinite(r) && r > 0){ idx *= r; peak = Math.max(peak, idx); dd = Math.max(dd, 1 - idx / peak); }
+    }
+    prevAct = a; prevInv = v ?? a;
+  }
+  return dd;
+}
+
+/* ================= chart ================= */
+const SERIES = {
+  act:{key:'portfolio', color:'var(--s1)'},
+  btc:{key:'btc', color:'var(--s2)'},
+  sav:{key:'bank', color:'var(--s3)'},
+  inf:{key:'inflation', color:'var(--s4)', dash:'5 4'},
+  inv:{key:'invested', color:'var(--s0)', dash:'2 4'}
+};
+const DIFF_LABEL = {sav:'diff_bank', btc:'diff_btc', inf:'diff_infl'};
+const PERIODS = [['p6m', 183], ['p1y', 365], ['p3y', 1096], ['pall', 0]];
+
+function chartCard(A, id){
+  const mode = UI.chartMode || 'value';
+  const period = UI.period || 'pall';
+  const hasCompare = A.n0 != null;
+  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  let keys = mode === 'value' ? ['act', 'sav', 'btc', 'inf', 'inv'] : ['sav', 'btc', 'inf'];
+  if(!hasCompare) keys = mode === 'value' ? ['act'] : [];
+  if(!A.btcOk) keys = keys.filter(k => k !== 'btc');
+  const legendKeys = keys.filter(k => !(mode === 'value' && k === 'act'));
+  return `<div class="card">
+    <div class="chart-head">
+      <div class="seg" data-act="mode">
+        <button class="${mode === 'value' ? 'on' : ''}" data-v="value">${t('mode_value')}</button>
+        <button class="${mode === 'diff' ? 'on' : ''}" data-v="diff" ${hasCompare ? '' : 'disabled'}>${t('mode_diff')}</button>
+      </div>
+    </div>
+    <div class="chart" id="${id}" data-keys="${keys.join(',')}"></div>
+    <div class="periods">${PERIODS.map(([k]) => `<button data-period="${k}" class="${period === k ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
+    ${legendKeys.length ? `<div class="legend">${mode === 'value' ? `<span class="chip"><span class="sw" style="background:${SERIES.act.color}"></span>${t('portfolio')}</span>` : ''}
+      ${legendKeys.map(k => `<button class="chip ${vis[k] ? '' : 'off'}" data-series="${k}"><span class="sw" style="background:${SERIES[k].color}"></span>${mode === 'diff' ? t(DIFF_LABEL[k]) : t(SERIES[k].key)}</button>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function drawChart(el, A){
+  if(!el) return;
+  const E = getEngine();
+  const mode = UI.chartMode || 'value';
+  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  const keys = el.dataset.keys ? el.dataset.keys.split(',').filter(Boolean) : [];
+  const days = (PERIODS.find(p => p[0] === (UI.period || 'pall')) || PERIODS[3])[1];
+  let from = A.firstIdx;
+  if(from < 0 || !keys.length){ el.innerHTML = `<div class="empty-chart">${t('chart_empty')}</div>`; el.style.height = 'auto'; return; }
+  if(days) from = Math.max(from, E.len - 1 - days);
+  if(mode === 'diff' && A.n0 != null) from = Math.max(from, A.n0 - E.N0);
+  const to = E.len - 1;
+  const lines = [];
+  for(const k of keys){
+    if(mode === 'value' && k !== 'act' && !vis[k]) continue;
+    if(mode === 'diff' && !vis[k]) continue;
+    const data = mode === 'value' ? A[k] : A.act.map((a, i) => a == null || A[k][i] == null ? null : a - A[k][i]);
+    lines.push({k, data, color:SERIES[k].color, dash:SERIES[k].dash && mode === 'value' ? SERIES[k].dash : null,
+      label: mode === 'value' ? t(SERIES[k].key) : t(DIFF_LABEL[k])});
+  }
+  const W = el.clientWidth || 320, H = 230, padL = 4, padR = 46, padT = 10, padB = 24;
+  const span = Math.max(1, to - from);
+  const step = Math.max(1, Math.ceil(span / 320));
+  const idxs = [];
+  for(let i = from; i < to; i += step) idxs.push(i);
+  idxs.push(to);
+  let min = Infinity, max = -Infinity;
+  for(const l of lines) for(const i of idxs){ const v = l.data[i]; if(v != null){ if(v < min) min = v; if(v > max) max = v; } }
+  if(mode === 'diff'){ min = Math.min(min, 0); max = Math.max(max, 0); }
+  if(!isFinite(min)){ el.innerHTML = `<div class="empty-chart">${t('chart_empty')}</div>`; return; }
+  if(max - min < 1e-9){ max += Math.abs(max) * 0.05 + 1; min -= Math.abs(min) * 0.05 + 1; }
+  const ticks = niceTicks(min, max, 4);
+  min = Math.min(min, ticks[0]); max = Math.max(max, ticks[ticks.length - 1]);
+  const x = i => padL + (W - padL - padR) * (i - from) / span;
+  const y = v => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+  for(const tv of ticks){
+    const yy = y(tv).toFixed(1);
+    const zero = mode === 'diff' && Math.abs(tv) < 1e-9;
+    svg += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="${zero ? 'var(--axis)' : 'var(--grid)'}" stroke-width="${zero ? 1.5 : 1}"/>`;
+    svg += `<text x="${W - padR + 6}" y="${+yy + 4}" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${esc(fmtCompact(tv))}</text>`;
+  }
+  // x labels: first, middle, last
+  const xl = [from, Math.round((from + to) / 2), to];
+  xl.forEach((i, k) => {
+    const s = dstr(E.N0 + i);
+    const lbl = span > 400 ? fmtDate(s, {month:'short', year:'2-digit', timeZone:'UTC'}) : fmtDate(s, {day:'numeric', month:'short', timeZone:'UTC'});
+    svg += `<text x="${x(i).toFixed(1)}" y="${H - 6}" font-size="11" fill="var(--muted)" text-anchor="${k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}">${esc(lbl)}</text>`;
+  });
+  for(const l of lines.slice().reverse()){
+    let d = '', pen = false;
+    for(const i of idxs){
+      const v = l.data[i];
+      if(v == null){ pen = false; continue; }
+      d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1);
+      pen = true;
+    }
+    if(l.k === 'act' && mode === 'value' && d){
+      const fi = idxs.find(i => l.data[i] != null), li = to;
+      svg += `<path d="${d}L${x(li).toFixed(1)},${H - padB}L${x(fi).toFixed(1)},${H - padB}Z" fill="var(--s1)" opacity=".08"/>`;
+    }
+    svg += `<path d="${d}" fill="none" stroke="${l.color}" stroke-width="${l.k === 'act' ? 2.4 : 2}" stroke-linejoin="round" stroke-linecap="round" ${l.dash ? `stroke-dasharray="${l.dash}"` : ''} vector-effect="non-scaling-stroke"/>`;
+  }
+  if(mode === 'value'){
+    const act = lines.find(l => l.k === 'act');
+    if(act) for(const di of A.dots){
+      if(di < from || di > to || act.data[di] == null) continue;
+      svg += `<circle cx="${x(di).toFixed(1)}" cy="${y(act.data[di]).toFixed(1)}" r="3.2" fill="var(--s1)" stroke="var(--card)" stroke-width="2"/>`;
+    }
+  }
+  svg += `<g class="cross" style="display:none"><line y1="${padT}" y2="${H - padB}" stroke="var(--axis)" stroke-width="1"/></g></svg><div class="tip hidden"></div>`;
+  el.innerHTML = svg;
+
+  const svgEl = el.querySelector('svg'), cross = el.querySelector('.cross'), tip = el.querySelector('.tip');
+  function show(clientX){
+    const rect = el.getBoundingClientRect();
+    const px = clientX - rect.left;
+    let i = Math.round(from + (px - padL) / (W - padL - padR) * span);
+    i = Math.max(from, Math.min(to, i));
+    const xx = x(i);
+    cross.style.display = '';
+    cross.querySelector('line').setAttribute('x1', xx); cross.querySelector('line').setAttribute('x2', xx);
+    cross.querySelectorAll('circle').forEach(c => c.remove());
+    let rows = '';
+    for(const l of lines){
+      const v = l.data[i];
+      if(v == null) continue;
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', xx); c.setAttribute('cy', y(v)); c.setAttribute('r', 4.5);
+      c.setAttribute('fill', l.color); c.setAttribute('stroke', 'var(--card)'); c.setAttribute('stroke-width', 2);
+      cross.appendChild(c);
+      rows += `<div><span><span class="dot" style="background:${l.color}"></span> ${esc(l.label)}</span><span class="n">${esc(fmtMoney(v, {sign: mode === 'diff'}))}</span></div>`;
+    }
+    tip.innerHTML = `<b>${esc(fmtDate(dstr(E.N0 + i)))}</b>${rows}`;
+    tip.classList.remove('hidden');
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(W - tw, xx - tw / 2)) + 'px';
+    tip.style.top = '-8px';
+    tip.style.transform = 'translateY(-100%)';
+  }
+  function hide(){ cross.style.display = 'none'; tip.classList.add('hidden'); }
+  el.onpointerdown = e => { show(e.clientX); };
+  el.onpointermove = e => { if(e.pointerType === 'mouse' || e.buttons) show(e.clientX); };
+  el.onpointerleave = hide;
+  el.onpointerup = e => { if(e.pointerType !== 'mouse') setTimeout(hide, 1600); };
+  el.ontouchmove = e => { if(e.touches[0]) show(e.touches[0].clientX); };
+}
+function niceTicks(min, max, n){
+  const span = max - min, raw = span / n;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const stepN = [1, 2, 2.5, 5, 10].find(s => s * mag >= raw) * mag;
+  const out = [];
+  for(let v = Math.floor(min / stepN) * stepN; v <= max + stepN * 0.5; v += stepN){ out.push(Math.abs(v) < stepN * 1e-9 ? 0 : v); if(out.length > 8) break; }
+  return out;
+}
+
+/* ================= views ================= */
+let tab = 'home';
+const ICONS = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+  holdings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  refresh:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  logo:'<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M8 21l5-5 4 3 7-8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 11h5v5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+
+function render(){
+  applyTheme();
+  document.documentElement.lang = lang();
+  $('nav').innerHTML = ['home', 'holdings', 'stats', 'settings'].map(k =>
+    `<button class="${tab === k ? 'on' : ''}" data-tab="${k}">${ICONS[k]}<span>${t('nav_' + k)}</span></button>`).join('');
+  const v = $('view');
+  if(tab === 'home') v.innerHTML = viewHome();
+  else if(tab === 'holdings') v.innerHTML = viewHoldings();
+  else if(tab === 'stats') v.innerHTML = viewStats();
+  else v.innerHTML = viewSettings();
+  afterRender(v);
+  if(page) renderPage();
+}
+function $(id){ return document.getElementById(id); }
+function applyTheme(){
+  const th = D.settings.theme;
+  if(th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
+  else delete document.documentElement.dataset.theme;
+}
+function statusText(){
+  if(marketStatus === 'updating') return t('updating');
+  if(marketStatus === 'offline') return t('offline');
+  const at = C.at ? new Intl.DateTimeFormat(loc(), {hour:'2-digit', minute:'2-digit'}).format(new Date(C.at)) : '';
+  if(marketStatus === 'partial') return t('partial');
+  return at ? t('updated_at', {t:at}) : '';
+}
+function renderStatus(){ document.querySelectorAll('.status').forEach(s => s.textContent = statusText()); }
+function topBar(){
+  return `<div class="top"><div class="brand">${ICONS.logo}GrowPort</div>
+    <div style="display:flex;align-items:center;gap:4px"><span class="status">${esc(statusText())}</span>
+    <button class="iconbtn" data-act="refresh" aria-label="${t('refresh')}">${ICONS.refresh}</button></div></div>`;
+}
+
+function heroCard(m, title){
+  if(!m) return '';
+  return `<div class="card hero">
+    <div class="lbl">${esc(title)}</div>
+    <div class="big">${esc(fmtMoney(m.value))}</div>
+    ${m.tracked ? `<div class="row"><span class="pill">${arrow(m.gain)}${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</span><span style="font-size:12.5px;opacity:.8">${t('gain_since')}</span></div>
+      ${m.preGain ? `<div class="sub">${esc(t('pre_gain', {v:fmtMoney(m.preGain, {sign:true})}))}</div>` : ''}`
+      : `<div class="sub">${t('no_compare')}</div>`}
+  </div>`;
+}
+function tilesHtml(m, isBtcOnly){
+  if(!m || !m.tracked) return '';
+  const row = (label, color, altGain, altPct, name) => {
+    if(altGain == null) return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('missing_price')}</div></div>`;
+    const d = m.gain - altGain;
+    const rt = ratioText(m.gain, altGain);
+    return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span>
+      <span class="v ${signCls(d)}">${arrow(d)}${esc(fmtMoney(d, {sign:true}))}</span></div>
+      <div class="s">${rt ? esc(rt) + ' · ' : ''}${esc(t('alt_gain', {n:name, v:fmtMoney(altGain, {sign:true})}))} (${esc(fmtPct(altPct))})</div></div>`;
+  };
+  return `<div class="card cmp">
+    ${row(t('vs_bank'), 'var(--s3)', m.bankGain, m.bankPct, t('bank'))}
+    ${isBtcOnly ? `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:var(--s2)"></span>${t('vs_btc')}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('btc_itself')}</div></div>` : row(t('vs_btc'), 'var(--s2)', m.btcGain, m.btcPct, 'BTC')}
+    ${row(t('vs_infl'), 'var(--s4)', m.inflGain, m.inflPct, t('inflation'))}
+  </div>`;
+}
+
+function viewHome(){
+  if(!D.holdings.length){
+    return topBar() + `<div class="card welcome">${ICONS.logo.replace('<svg ', '<svg width="56" height="56" ')}<h1>${t('welcome_title')}</h1><p>${t('welcome_text')}</p>
+      <button class="btn" data-act="add-holding">${t('add_holding')}</button><div style="height:10px"></div>
+      <button class="btn ghost" data-act="demo">${t('demo')}</button></div>`;
+  }
+  const E = getEngine(), A = E.total(), m = metrics(A);
+  let html = topBar() + demoBanner();
+  html += heroCard(m, t('total_value')) + tilesHtml(m);
+  html += chartCard(A, 'chart-home');
+  html += `<button class="btn ghost" data-act="stats">${t('detailed_stats')}</button>`;
+  html += `<h2>${t('nav_holdings')}</h2>` + holdingsList(true);
+  return html;
+}
+function demoBanner(){ return D.demo ? `<div class="banner"><span>${t('demo_on')}</span><button class="btn small ghost" data-act="demo-clear">${t('demo_clear')}</button></div>` : ''; }
+
+const TYPE_COLOR = {fund:'var(--s1)', btc:'var(--s2)', ticker:'var(--s3)'};
+function holdingRow(h){
+  const E = getEngine(), r = E.result(h.id);
+  const A = E.holding(h.id), m = metrics(A);
+  let meta = t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '');
+  let badge = '';
+  if(r && r.warn === 'fx') badge = `<span class="badge warn">${t('missing_fx')}</span>`;
+  else if(r && r.warn === 'price') badge = `<span class="badge warn">${t('missing_price')}</span>`;
+  else if(h.type === 'fund' && r){
+    const days = E.T - r.lastEntry;
+    if(days > 45) badge = `<span class="badge warn">${t('stale', {d:days})}</span>`;
+    else if(r.i0 == null) badge = `<span class="badge">${t('history_only')}</span>`;
+  }
+  const initials = h.type === 'btc' ? '₿' : esc((h.name || '?').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2).toUpperCase());
+  return `<button class="item" data-open-holding="${h.id}">
+    <div class="ticon" style="background:${TYPE_COLOR[h.type]}">${initials}</div>
+    <div class="main"><div class="name">${esc(h.name)}</div><div class="meta">${esc(meta)}${badge}</div></div>
+    <div class="right"><div class="val">${m ? esc(fmtMoney(m.value)) : t('none')}</div>
+    ${m && m.tracked ? `<div class="chg ${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : ''}</div>
+  </button>`;
+}
+function holdingsList(compact){
+  const E = getEngine();
+  let html = '';
+  for(const a of D.accounts){
+    const hs = D.holdings.filter(h => h.accountId === a.id);
+    if(!hs.length && compact) continue;
+    const m = metrics(E.account(a.id));
+    html += `<div class="list"><button class="acc-head" data-open-account="${a.id}"><span class="name">${esc(a.name)}</span>
+      <span style="text-align:right">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}${m && m.tracked ? `<br><span class="${signCls(m.gain - m.bankGain)}" style="font-size:12px">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</span>` : ''}</span></button>
+      ${hs.map(holdingRow).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
+  }
+  return html;
+}
+function viewHoldings(){
+  let html = topBar() + demoBanner();
+  html += holdingsList(false);
+  html += `<div class="btnrow"><button class="btn" data-act="add-holding">${t('add_holding')}</button><button class="btn ghost" data-act="add-account">${t('add_account')}</button></div>`;
+  return html;
+}
+
+function scopeOptions(sel){
+  let o = `<option value="total" ${sel === 'total' ? 'selected' : ''}>${t('total')}</option>`;
+  for(const a of D.accounts){
+    o += `<option value="a:${a.id}" ${sel === 'a:' + a.id ? 'selected' : ''}>${esc(a.name)}</option>`;
+    for(const h of D.holdings.filter(h => h.accountId === a.id)) o += `<option value="h:${h.id}" ${sel === 'h:' + h.id ? 'selected' : ''}>&nbsp;&nbsp;${esc(h.name)}</option>`;
+  }
+  return o;
+}
+function aggFor(scope){
+  const E = getEngine();
+  if(scope && scope.startsWith('a:')) return E.account(scope.slice(2));
+  if(scope && scope.startsWith('h:')) return E.holding(scope.slice(2));
+  return E.total();
+}
+function viewStats(){
+  const scope = UI.statsScope || 'total';
+  const E = getEngine(), A = aggFor(scope), m = metrics(A);
+  let html = topBar();
+  html += `<label class="f"><span>${t('scope')}</span><select class="inp" data-act="scope">${scopeOptions(scope)}</select></label>`;
+  if(!m){ return html + `<div class="card empty-chart">${t('chart_empty')}</div>`; }
+  html += heroCard(m, t('total_value'));
+  if(m.tracked){
+    const i = E.len - 1;
+    const xr = v => v === 'short' ? t('too_short') : v == null ? t('none') : fmtPct(v);
+    const xa = xirr(A.flows, E.T, A.tAct[i]);
+    const xb = xirr(A.flows, E.T, A.tSav[i]);
+    const xc = A.btcOk ? xirr(A.flows, E.T, A.tBtc[i]) : null;
+    const xi = xirr(A.flows, E.T, A.tInf[i]);
+    html += `<div class="card"><div class="scroll"><table>
+      <tr><th></th><th>${t('gain_nom')}</th><th>${t('total_ret')}</th><th>${t('annual').replace(' (XIRR)', '')}</th></tr>
+      <tr><td><span class="dot" style="background:var(--s1)"></span> ${t('portfolio')}</td><td class="${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))}</td><td>${esc(fmtPct(m.gainPct))}</td><td>${esc(xr(xa))}</td></tr>
+      <tr><td><span class="dot" style="background:var(--s3)"></span> ${t('bank')}</td><td>${esc(fmtMoney(m.bankGain, {sign:true}))}</td><td>${esc(fmtPct(m.bankPct))}</td><td>${esc(xr(xb))}</td></tr>
+      <tr><td><span class="dot" style="background:var(--s2)"></span> BTC</td><td>${esc(fmtMoney(m.btcGain, {sign:true}))}</td><td>${esc(fmtPct(m.btcPct))}</td><td>${esc(xr(xc))}</td></tr>
+      <tr><td><span class="dot" style="background:var(--s4)"></span> ${t('inflation')}</td><td>${esc(fmtMoney(m.inflGain, {sign:true}))}</td><td>${esc(fmtPct(m.inflPct))}</td><td>${esc(xr(xi))}</td></tr>
+    </table></div>
+    <div class="kv" style="margin-top:6px"><span class="k">${t('vs_bank')}</span><span class="v ${signCls(m.gain - m.bankGain)}">${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}<br><span class="muted" style="font-weight:400;font-size:12px">${esc(ratioText(m.gain, m.bankGain))}</span></span></div>
+    <div class="kv"><span class="k">${t('vs_btc')}</span><span class="v ${m.btcGain == null ? 'muted' : signCls(m.gain - m.btcGain)}">${m.btcGain == null ? t('none') : esc(fmtMoney(m.gain - m.btcGain, {sign:true}))}<br><span class="muted" style="font-weight:400;font-size:12px">${esc(ratioText(m.gain, m.btcGain))}</span></span></div>
+    <div class="kv"><span class="k">${t('real_gain')}</span><span class="v ${signCls(m.gain - m.inflGain)}">${esc(fmtMoney(m.gain - m.inflGain, {sign:true}))}</span></div>
+    <div class="kv"><span class="k">${t('maxdd')}</span><span class="v">${esc(fmtPct(-maxDrawdown(A), false))}</span></div>
+    <div class="kv"><span class="k">${t('started')}</span><span class="v">${esc(fmtDate(dstr(A.n0)))}</span></div>
+    </div>
+    <div class="sectnote">${t('compare_note')}</div>`;
+  }
+  html += chartCard(A, 'chart-stats');
+  if(scope === 'total' || scope.startsWith('a:')){
+    const rows = A.rs.map(r => ({h:r.h, m:metrics(E.holding(r.h.id))})).filter(x => x.m);
+    html += `<h2>${t('per_holding')}</h2><div class="card"><div class="scroll"><table>
+      <tr><th>${t('name')}</th><th>${t('value')}</th><th>${t('gain')}</th><th>${t('vs_bank')}</th><th>${t('vs_btc')}</th></tr>
+      ${rows.map(({h, m}) => `<tr><td>${esc(h.name.length > 22 ? h.name.slice(0, 21) + '…' : h.name)}</td><td>${esc(fmtMoney(m.value))}</td>
+        <td class="${m.tracked ? signCls(m.gain) : 'muted'}">${m.tracked ? esc(fmtMoney(m.gain, {sign:true})) : t('none')}</td>
+        <td class="${m.tracked ? signCls(m.gain - m.bankGain) : 'muted'}">${m.tracked ? esc(fmtMoney(m.gain - m.bankGain, {sign:true})) : t('none')}</td>
+        <td class="${m.tracked && m.btcGain != null && h.type !== 'btc' ? signCls(m.gain - m.btcGain) : 'muted'}">${m.tracked && m.btcGain != null && h.type !== 'btc' ? esc(fmtMoney(m.gain - m.btcGain, {sign:true})) : t('none')}</td></tr>`).join('')}
+    </table></div></div>`;
+  }
+  html += monthlyTable(A);
+  return html;
+}
+function monthlyTable(A){
+  const E = getEngine();
+  const rows = [];
+  for(let i = E.len - 1; i >= 0; i--){
+    const s = dstr(E.N0 + i);
+    const last = i === E.len - 1 || dstr(E.N0 + i + 1).endsWith('-01');
+    if(!last || A.act[i] == null) continue;
+    const mk = s.slice(0, 7);
+    const startI = Math.max(0, dnum(mk + '-01') - E.N0 - 1);
+    const dep = A.tInv[i] != null ? A.tInv[i] - (A.tInv[startI] || 0) : null;
+    rows.push({mk, act:A.act[i], dep, gain:A.tInv[i] != null ? A.tAct[i] - A.tInv[i] : null, sav:A.tInv[i] != null ? A.tSav[i] - A.tInv[i] : null, btc:A.btcOk && A.tInv[i] != null ? A.tBtc[i] - A.tInv[i] : null});
+  }
+  if(!rows.length) return '';
+  const shown = UI.allMonths ? rows : rows.slice(0, 12);
+  return `<h2>${t('monthly')}</h2><div class="card"><div class="scroll"><table>
+    <tr><th>${t('month')}</th><th>${t('value')}</th><th>${t('deposits')}</th><th>${t('gain')}</th><th>${t('bank')}</th><th>BTC</th></tr>
+    ${shown.map(r => `<tr><td>${esc(fmtMonth(r.mk))}</td><td>${esc(fmtMoney(r.act))}</td><td>${r.dep ? esc(fmtMoney(r.dep, {sign:true})) : t('none')}</td>
+      <td class="${r.gain == null ? 'muted' : signCls(r.gain)}">${r.gain == null ? t('none') : esc(fmtMoney(r.gain, {sign:true}))}</td>
+      <td>${r.sav == null ? t('none') : esc(fmtMoney(r.sav, {sign:true}))}</td><td>${r.btc == null ? t('none') : esc(fmtMoney(r.btc, {sign:true}))}</td></tr>`).join('')}
+  </table></div>${rows.length > 12 && !UI.allMonths ? `<button class="btn ghost small" style="margin-top:10px" data-act="all-months">${t('show_all')}</button>` : ''}</div>`;
+}
+
+function viewSettings(){
+  const s = D.settings;
+  const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
+  const ver = NATIVE && NATIVE.getVersion ? NATIVE.getVersion() : 'web';
+  const canUpdate = NATIVE && NATIVE.canSelfUpdate && NATIVE.canSelfUpdate();
+  return topBar() + `
+  <div class="card">
+    <label class="f"><span>${t('lang')}</span><select class="inp" data-set="language">${opt('en', s.language, 'English')}${opt('sr', s.language, 'Српски')}${opt('no', s.language, 'Norsk')}</select></label>
+    <label class="f"><span>${t('theme')}</span><select class="inp" data-set="theme">${opt('system', s.theme, t('th_system'))}${opt('light', s.theme, t('th_light'))}${opt('dark', s.theme, t('th_dark'))}</select></label>
+    <label class="f" style="margin-bottom:0"><span>${t('base_cur')}</span><select class="inp" data-set="baseCurrency">${CURRENCIES.map(c => opt(c, s.baseCurrency, c)).join('')}</select></label>
+  </div>
+  <h2>${t('savings')}</h2>
+  <div class="card">
+    <label class="f"><span>${t('sav_rate')}</span><input class="inp" inputmode="decimal" data-set="savingsRate" data-pct value="${fmtInput(s.savingsRate * 100)}"></label>
+    <div class="hint">${t('sav_hint')}</div>
+    <div style="font-weight:600;margin:14px 0 6px">${t('rate_changes')}</div>
+    ${D.rateChanges.slice().sort((a, b) => a.month < b.month ? -1 : 1).map(r => `<div class="kv"><span class="k">${esc(fmtMonth(r.month))}</span><span class="v">${esc(fmtNum(r.rate * 100, 3))} % <button class="iconbtn" data-del-rate="${r.month}" aria-label="${t('del')}">✕</button></span></div>`).join('')}
+    <div class="hint" style="margin:6px 0 10px">${t('rate_hint')}</div>
+    <button class="btn ghost small" data-act="add-rate">${t('add_rate')}</button>
+  </div>
+  <h2>BTC</h2>
+  <div class="card"><label class="f" style="margin-bottom:0"><span>${t('btc_fee')}</span><input class="inp" inputmode="decimal" data-set="btcFee" data-pct value="${fmtInput(s.btcFee * 100)}"></label></div>
+  <h2>${t('infl_src')}</h2>
+  <div class="card">
+    <label class="f"><span>${t('infl_src')}</span><select class="inp" data-set="inflSource">${opt('auto', s.inflSource, t('infl_auto'))}${opt('fixed', s.inflSource, t('infl_fixed'))}</select></label>
+    <label class="f"><span>${t('infl_rate')}</span><input class="inp" inputmode="decimal" data-set="inflRate" data-pct value="${fmtInput(s.inflRate * 100)}"></label>
+    <div class="hint" style="margin-bottom:0">${t('infl_hint')}</div>
+  </div>
+  <h2>${t('accounts')}</h2>
+  <div class="list">${D.accounts.map(a => `<button class="item" data-edit-account="${a.id}"><div class="main"><div class="name">${esc(a.name)}</div><div class="meta">${D.holdings.filter(h => h.accountId === a.id).length} · ${t('nav_holdings')}</div></div><span class="muted">${t('edit')}</span></button>`).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>
+  <button class="btn ghost" data-act="add-account">${t('add_account')}</button>
+  <h2>${t('data')}</h2>
+  <div class="card">
+    <div class="btnrow" style="margin-bottom:8px"><button class="btn ghost" data-act="export">${t('export')}</button><button class="btn ghost" data-act="import">${t('import')}</button></div>
+    <input type="file" id="import-file" accept=".json,application/json,*/*" class="hidden">
+    ${D.holdings.length ? '' : `<button class="btn ghost" data-act="demo" style="margin-bottom:8px">${t('demo')}</button>`}
+    <button class="btn danger" data-act="wipe">${t('wipe')}</button>
+  </div>
+  <h2>${t('market')}</h2>
+  <div class="card"><div class="kv"><span class="k status">${esc(statusText())}</span><span class="v"><button class="btn small ghost" data-act="refresh">${t('refresh')}</button></span></div>
+  <div class="hint" style="margin:6px 0 0">ECB (Frankfurter) · Binance / Coinbase · Yahoo Finance · SSB</div></div>
+  <h2>${t('about')}</h2>
+  <div class="card"><div class="kv"><span class="k">${t('version')}</span><span class="v">${esc(ver)}</span></div>
+  ${canUpdate ? `<button class="btn ghost" style="margin-top:8px" data-act="check-update">${t('check_updates')}</button>` : ''}</div>`;
+}
+
+/* ---------- detail page (holding or account) ---------- */
+let page = null;   // {type:'holding'|'account', id}
+function openPage(p){ page = p; history.pushState({gp:'page'}, ''); renderPage(); }
+function closePage(){ page = null; $('overlay').querySelectorAll('.page').forEach(e => e.remove()); }
+function renderPage(){
+  const ov = $('overlay');
+  let el = ov.querySelector('.page');
+  if(!page){ if(el) el.remove(); return; }
+  const E = getEngine();
+  let title, A, body = '';
+  if(page.type === 'holding'){
+    const h = D.holdings.find(x => x.id === page.id);
+    if(!h){ page = null; if(el) el.remove(); return; }
+    title = h.name; A = E.holding(h.id);
+    const m = metrics(A);
+    body += heroCard(m, t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '') + (h.currency && h.currency !== D.settings.baseCurrency ? ' · ' + h.currency : ''));
+    if(!m) body += `<div class="card empty-chart">${t('chart_empty')}</div>`;
+    body += tilesHtml(m, h.type === 'btc');
+    if(m) body += chartCard(A, 'chart-page');
+    body += `<div class="btnrow" style="margin-bottom:6px"><button class="btn" data-act="${h.type === 'fund' ? 'new-entry' : 'new-trade'}">${h.type === 'fund' ? t('new_entry') : t('new_trade')}</button>
+      <button class="btn ghost" data-act="edit-holding">${t('edit')}</button></div>`;
+    body += h.type === 'fund' ? entriesList(h) : tradesList(h);
+  } else {
+    const a = D.accounts.find(x => x.id === page.id);
+    if(!a){ page = null; if(el) el.remove(); return; }
+    title = a.name; A = E.account(a.id);
+    const m = metrics(A);
+    body += heroCard(m, t('account')) + tilesHtml(m) + (m ? chartCard(A, 'chart-page') : '');
+    const hs = D.holdings.filter(h => h.accountId === a.id);
+    body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
+  }
+  if(!el){ el = document.createElement('div'); el.className = 'page'; ov.appendChild(el); }
+  const scroll = el.scrollTop;
+  el.innerHTML = `<div class="top"><button class="iconbtn" data-act="back" aria-label="Back">${ICONS.back}</button><div class="title">${esc(title)}</div></div><div class="wrap" style="padding-top:0">${body}</div>`;
+  el.scrollTop = scroll;
+  afterRender(el);
+}
+function entriesList(h){
+  const es = D.entries.filter(e => e.holdingId === h.id).sort((a, b) => a.date < b.date ? 1 : -1);
+  const cur = h.currency || D.settings.baseCurrency;
+  return `<h2>${t('entries')}</h2><div class="list">${es.map(e => `<button class="item" data-edit-entry="${e.id}">
+    <div class="main"><div class="name">${esc(fmtDate(e.date))}</div><div class="meta">${e.ret != null ? esc(t('paid_in', {v:fmtMoney(e.value - e.ret, {cur})})) : t('history_only')}</div></div>
+    <div class="right"><div class="val">${esc(fmtMoney(e.value, {cur}))}</div>${e.ret != null ? `<div class="chg ${signCls(e.ret)}">${esc(fmtMoney(e.ret, {cur, sign:true}))}</div>` : ''}</div></button>`).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
+}
+function tradesList(h){
+  const ts = D.trades.filter(e => e.holdingId === h.id).sort((a, b) => a.date < b.date ? 1 : -1);
+  const cur = h.currency || D.settings.baseCurrency;
+  return `<h2>${t('trades')}</h2><div class="list">${ts.map(e => {
+    const total = h.type === 'btc' ? e.amount : e.qty * e.price + (e.side === 'sell' ? -(e.fee || 0) : (e.fee || 0));
+    return `<button class="item" data-edit-trade="${e.id}"><div class="main"><div class="name">${t(e.side)} · ${esc(fmtDate(e.date))}</div>
+      <div class="meta">${esc(fmtNum(e.qty, 8))} ${h.type === 'btc' ? 'BTC' : ''}${h.type === 'ticker' ? ' × ' + esc(fmtMoney(e.price, {cur, digits:2})) : ''}</div></div>
+      <div class="right"><div class="val">${esc(fmtMoney(total, {cur}))}</div></div></button>`;
+  }).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
+}
+
+function afterRender(root){
+  const E = getEngine();
+  root.querySelectorAll('.chart').forEach(el => {
+    let A;
+    if(el.id === 'chart-home') A = E.total();
+    else if(el.id === 'chart-stats') A = aggFor(UI.statsScope || 'total');
+    else if(page) A = page.type === 'holding' ? E.holding(page.id) : E.account(page.id);
+    if(A) drawChart(el, A);
+  });
+}
+
+/* ================= sheets (forms) ================= */
+function openSheet(html, onMount){
+  const bg = document.createElement('div');
+  bg.className = 'sheet-bg';
+  bg.innerHTML = `<div class="sheet"><div class="grab"></div>${html}</div>`;
+  bg.addEventListener('click', e => { if(e.target === bg) history.back(); });
+  $('overlay').appendChild(bg);
+  history.pushState({gp:'sheet'}, '');
+  if(onMount) onMount(bg.querySelector('.sheet'));
+  return bg;
+}
+function closeSheet(){ history.back(); }
+function dropTopSheet(){
+  const s = $('overlay').querySelectorAll('.sheet-bg');
+  if(s.length){ s[s.length - 1].remove(); return true; }
+  return false;
+}
+window.addEventListener('popstate', () => {
+  if(dropTopSheet()) return;
+  if(page){ closePage(); render(); }
+});
+
+function accountOptions(sel){ return D.accounts.map(a => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.name)}</option>`).join(''); }
+function ensureAccount(){
+  if(!D.accounts.length) D.accounts.push({id:uid(), name:t('default_account')});
+  return D.accounts[0].id;
+}
+
+function holdingForm(h){
+  const isNew = !h;
+  const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
+  h = h || {type:'fund', name:'', accountId:defAcc, currency:D.settings.baseCurrency};
+  let type = h.type;
+  const accOpts = D.accounts.length ? accountOptions(h.accountId) : `<option value="">${esc(t('default_account'))}</option>`;
+  openSheet(`<h3>${isNew ? t('add_holding') : t('edit')}</h3>
+    ${isNew ? `<div class="typepick">${['fund', 'btc', 'ticker'].map(k => `<button data-type="${k}" class="${k === type ? 'on' : ''}">${t('type_' + k)}</button>`).join('')}</div><div class="hint" id="type-hint"></div>` : ''}
+    <div id="sym-wrap"><label class="f"><span>${t('symbol')}</span><div style="display:flex;gap:8px"><input class="inp" id="h-sym" placeholder="${t('search_hint')}" value="${esc(h.symbol || '')}" autocapitalize="characters"><button class="btn small ghost" id="h-search">${t('search')}</button></div></label><div id="sym-res"></div></div>
+    <label class="f"><span>${t('name')}</span><input class="inp" id="h-name" value="${esc(h.name)}"></label>
+    <div class="row2">
+      <label class="f"><span>${t('account')}</span><select class="inp" id="h-acc">${accOpts}</select></label>
+      <label class="f" id="cur-wrap"><span>${t('currency')}</span><select class="inp" id="h-cur">${CURRENCIES.concat(h.currency && !CURRENCIES.includes(h.currency) ? [h.currency] : []).map(c => `<option ${c === (h.currency || D.settings.baseCurrency) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+    </div>
+    <button class="btn" id="h-save">${t('save')}</button>
+    ${isNew ? '' : `<div style="height:8px"></div><button class="btn danger" id="h-del">${t('del')}</button>`}`,
+  sh => {
+    const sync = () => {
+      sh.querySelectorAll('.typepick button').forEach(b => b.classList.toggle('on', b.dataset.type === type));
+      const hint = sh.querySelector('#type-hint'); if(hint) hint.textContent = t('type_' + type + '_hint');
+      sh.querySelector('#sym-wrap').classList.toggle('hidden', type !== 'ticker');
+      if(type === 'btc' && !sh.querySelector('#h-name').value) sh.querySelector('#h-name').value = 'Bitcoin';
+    };
+    sh.querySelectorAll('.typepick button').forEach(b => b.onclick = () => { type = b.dataset.type; sync(); });
+    sync();
+    sh.querySelector('#h-search').onclick = async () => {
+      const q = sh.querySelector('#h-sym').value.trim();
+      if(!q) return;
+      const box = sh.querySelector('#sym-res');
+      box.innerHTML = `<div class="hint">…</div>`;
+      try{
+        const res = await searchTicker(q);
+        box.innerHTML = res.length ? `<div class="results">${res.map(r => `<button data-sym="${esc(r.symbol)}" data-name="${esc(r.name)}"><b>${esc(r.symbol)}</b> · ${esc(r.name)} <span class="muted">${esc(r.exch)} ${esc(r.type)}</span></button>`).join('')}</div>` : `<div class="hint">${t('no_results')}</div>`;
+        box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+          sh.querySelector('#h-sym').value = b.dataset.sym;
+          sh.querySelector('#h-name').value = b.dataset.name;
+          box.innerHTML = `<div class="hint">…</div>`;
+          try{
+            const r = await fetchTicker(b.dataset.sym, dnum(todayStr()) - 10);
+            const sel = sh.querySelector('#h-cur');
+            if(![...sel.options].some(o => o.value === r.currency)) sel.insertAdjacentHTML('beforeend', `<option>${esc(r.currency)}</option>`);
+            sel.value = r.currency;
+            const last = Object.keys(r.prices).sort().pop();
+            box.innerHTML = last ? `<div class="hint">${esc(fmtDate(last))}: ${esc(fmtMoney(r.prices[last], {cur:r.currency, digits:2}))}</div>` : '';
+          }catch(e){ box.innerHTML = ''; }
+        });
+      }catch(e){ box.innerHTML = `<div class="hint">${t('no_results')}</div>`; }
+    };
+    sh.querySelector('#h-save').onclick = () => {
+      const name = sh.querySelector('#h-name').value.trim();
+      const sym = sh.querySelector('#h-sym').value.trim().toUpperCase();
+      if(!name || (type === 'ticker' && !sym)){ toast(t('required')); return; }
+      let acc = sh.querySelector('#h-acc').value || ensureAccount();
+      const cur = sh.querySelector('#h-cur').value;
+      if(isNew){
+        const nh = {id:uid(), type, name, accountId:acc, currency:cur};
+        if(type === 'ticker') nh.symbol = sym;
+        D.holdings.push(nh);
+        saveData(); closeSheet();
+        setTimeout(() => { openPage({type:'holding', id:nh.id}); refreshMarket(); }, 50);
+      } else {
+        Object.assign(h, {name, accountId:acc, currency:cur});
+        if(h.type === 'ticker') h.symbol = sym;
+        saveData(); closeSheet(); render(); refreshMarket();
+      }
+    };
+    const del = sh.querySelector('#h-del');
+    if(del) del.onclick = () => {
+      if(!confirm(t('confirm_del_holding'))) return;
+      D.holdings = D.holdings.filter(x => x.id !== h.id);
+      D.entries = D.entries.filter(x => x.holdingId !== h.id);
+      D.trades = D.trades.filter(x => x.holdingId !== h.id);
+      saveData(); closeSheet(); setTimeout(() => history.back(), 30);
+    };
+  });
+}
+
+function entryForm(h, e){
+  const isNew = !e;
+  e = e || {date:todayStr(), value:'', ret:null};
+  const cur = h.currency || D.settings.baseCurrency;
+  openSheet(`<h3>${isNew ? t('new_entry') : t('edit')}</h3><div class="hint">${esc(h.name)}</div>
+    <label class="f"><span>${t('date')}</span><input class="inp" type="date" id="e-date" value="${e.date}" max="${todayStr()}"></label>
+    <label class="f"><span>${t('value')} (${cur})</span><input class="inp" inputmode="decimal" id="e-val" value="${esc(fmtInput(e.value))}"></label>
+    <label class="f"><span>${t('ret')} (${cur})</span><input class="inp" inputmode="decimal" id="e-ret" value="${esc(fmtInput(e.ret))}" placeholder="+/-"></label>
+    <div class="hint" id="e-paid">${t('ret_hint')}</div>
+    <button class="btn" id="e-save">${t('save')}</button>
+    ${isNew ? '' : `<div style="height:8px"></div><button class="btn danger" id="e-del">${t('del')}</button>`}`,
+  sh => {
+    const upd = () => {
+      const v = parseNum(sh.querySelector('#e-val').value), r = parseNum(sh.querySelector('#e-ret').value);
+      sh.querySelector('#e-paid').textContent = isFinite(v) && isFinite(r) ? t('paid_in', {v:fmtMoney(v - r, {cur})}) : t('ret_hint');
+    };
+    sh.querySelector('#e-val').oninput = upd; sh.querySelector('#e-ret').oninput = upd; upd();
+    sh.querySelector('#e-save').onclick = () => {
+      const date = sh.querySelector('#e-date').value, v = parseNum(sh.querySelector('#e-val').value);
+      const rs = sh.querySelector('#e-ret').value.trim(), r = rs ? parseNum(rs) : null;
+      if(!date || !isFinite(v) || (rs && !isFinite(r))){ toast(t('required')); return; }
+      const clash = D.entries.find(x => x.holdingId === h.id && x.date === date && x !== e);
+      if(clash) D.entries = D.entries.filter(x => x !== clash);
+      if(isNew) D.entries.push({id:uid(), holdingId:h.id, date, value:v, ret:r});
+      else Object.assign(e, {date, value:v, ret:r});
+      saveData(); closeSheet(); render(); if(date < (earliestDate() || date) || isNew) refreshMarket();
+    };
+    const del = sh.querySelector('#e-del');
+    if(del) del.onclick = () => { if(!confirm(t('confirm_del'))) return; D.entries = D.entries.filter(x => x !== e); saveData(); closeSheet(); render(); };
+  });
+}
+
+function tradeForm(h, e){
+  const isNew = !e, isBtc = h.type === 'btc';
+  e = e || {date:todayStr(), side:'buy', qty:'', amount:'', price:'', fee:''};
+  const cur = h.currency || D.settings.baseCurrency;
+  let side = e.side;
+  const E = getEngine(), p = E.btcPrice(E.T), m = E.fx(cur, E.T);
+  const btcHint = isBtc && p && m ? t('btc_price_now', {v:fmtMoney(p / m, {cur})}) : '';
+  const f = v => esc(fmtInput(v));
+  openSheet(`<h3>${isNew ? t('new_trade') : t('edit')}</h3><div class="hint">${esc(h.name)}${btcHint ? ' · ' + esc(btcHint) : ''}</div>
+    <div class="seg" id="t-side" style="margin-bottom:12px"><button data-v="buy">${t('buy')}</button><button data-v="sell">${t('sell')}</button></div>
+    <label class="f"><span>${t('date')}</span><input class="inp" type="date" id="t-date" value="${e.date}" max="${todayStr()}"></label>
+    ${isBtc ? `<label class="f"><span>${t('qty_btc')}</span><input class="inp" inputmode="decimal" id="t-qty" value="${f(e.qty)}"></label>
+      <label class="f"><span id="t-amt-l">${t('amount_paid')} (${cur})</span><input class="inp" inputmode="decimal" id="t-amt" value="${f(e.amount)}"></label>`
+    : `<div class="row2"><label class="f"><span>${t('qty')}</span><input class="inp" inputmode="decimal" id="t-qty" value="${f(e.qty)}"></label>
+      <label class="f"><span>${t('price_unit')} (${cur})</span><input class="inp" inputmode="decimal" id="t-price" value="${f(e.price)}"></label></div>
+      <label class="f"><span>${t('fee')} (${cur})</span><input class="inp" inputmode="decimal" id="t-fee" value="${f(e.fee)}"></label>`}
+    <button class="btn" id="t-save">${t('save')}</button>
+    ${isNew ? '' : `<div style="height:8px"></div><button class="btn danger" id="t-del">${t('del')}</button>`}`,
+  sh => {
+    const sync = () => {
+      sh.querySelectorAll('#t-side button').forEach(b => b.classList.toggle('on', b.dataset.v === side));
+      const l = sh.querySelector('#t-amt-l'); if(l) l.textContent = (side === 'buy' ? t('amount_paid') : t('amount_got')) + ` (${cur})`;
+    };
+    sh.querySelectorAll('#t-side button').forEach(b => b.onclick = () => { side = b.dataset.v; sync(); });
+    sync();
+    sh.querySelector('#t-save').onclick = () => {
+      const date = sh.querySelector('#t-date').value, qty = parseNum(sh.querySelector('#t-qty').value);
+      const rec = {date, side, qty};
+      if(isBtc) rec.amount = parseNum(sh.querySelector('#t-amt').value);
+      else { rec.price = parseNum(sh.querySelector('#t-price').value); const fs = sh.querySelector('#t-fee').value.trim(); rec.fee = fs ? parseNum(fs) : 0; }
+      if(!date || !(qty > 0) || (isBtc ? !(rec.amount > 0) : !(rec.price > 0) || !isFinite(rec.fee))){ toast(t('required')); return; }
+      if(isNew) D.trades.push(Object.assign({id:uid(), holdingId:h.id}, rec));
+      else Object.assign(e, rec);
+      saveData(); closeSheet(); render(); refreshMarket();
+    };
+    const del = sh.querySelector('#t-del');
+    if(del) del.onclick = () => { if(!confirm(t('confirm_del'))) return; D.trades = D.trades.filter(x => x !== e); saveData(); closeSheet(); render(); };
+  });
+}
+
+function accountForm(a){
+  const isNew = !a;
+  openSheet(`<h3>${isNew ? t('add_account') : t('edit')}</h3>
+    <label class="f"><span>${t('name')}</span><input class="inp" id="a-name" value="${esc(a ? a.name : '')}" placeholder="Fondskonto, ASK…"></label>
+    <button class="btn" id="a-save">${t('save')}</button>
+    ${isNew ? '' : `<div style="height:8px"></div><button class="btn danger" id="a-del">${t('del')}</button>`}`,
+  sh => {
+    sh.querySelector('#a-save').onclick = () => {
+      const name = sh.querySelector('#a-name').value.trim();
+      if(!name){ toast(t('required')); return; }
+      if(isNew) D.accounts.push({id:uid(), name}); else a.name = name;
+      saveData(); closeSheet(); render();
+    };
+    const del = sh.querySelector('#a-del');
+    if(del) del.onclick = () => {
+      if(D.holdings.some(h => h.accountId === a.id)){ toast(t('acc_not_empty')); return; }
+      if(!confirm(t('confirm_del'))) return;
+      D.accounts = D.accounts.filter(x => x !== a); saveData(); closeSheet(); render();
+    };
+  });
+}
+
+function rateForm(){
+  const mk = todayStr().slice(0, 7);
+  openSheet(`<h3>${t('add_rate')}</h3>
+    <label class="f"><span>${t('rate_from')}</span><input class="inp" type="month" id="r-month" value="${mk}"></label>
+    <label class="f"><span>${t('sav_rate')}</span><input class="inp" inputmode="decimal" id="r-rate" value="${esc(fmtInput(D.settings.savingsRate * 100))}"></label>
+    <div class="hint">${t('rate_hint')}</div>
+    <button class="btn" id="r-save">${t('save')}</button>`,
+  sh => {
+    sh.querySelector('#r-save').onclick = () => {
+      const month = sh.querySelector('#r-month').value, r = parseNum(sh.querySelector('#r-rate').value);
+      if(!/^\d{4}-\d{2}$/.test(month) || !isFinite(r)){ toast(t('required')); return; }
+      D.rateChanges = D.rateChanges.filter(x => x.month !== month).concat([{month, rate:r / 100}]);
+      saveData(); closeSheet(); render();
+    };
+  });
+}
+
+/* ================= backup ================= */
+function exportBackup(){
+  const name = 'growport-backup-' + todayStr() + '.json';
+  const text = JSON.stringify(Object.assign({app:'GrowPort', exported:new Date().toISOString()}, D), null, 2);
+  if(NATIVE && NATIVE.saveFile){ NATIVE.saveFile(name, text); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function importBackup(file){
+  const rd = new FileReader();
+  rd.onload = () => {
+    let d = null;
+    try{ d = normalize(JSON.parse(rd.result)); }catch(e){}
+    if(!d){ toast(t('import_bad')); return; }
+    if(D.holdings.length && !confirm(t('import_confirm'))) return;
+    delete d.demo;
+    D = d; saveData(); toast(t('import_ok')); render(); refreshMarket();
+  };
+  rd.readAsText(file);
+}
+
+/* ================= demo data ================= */
+function loadDemo(){
+  const T = dnum(todayStr());
+  const a1 = {id:uid(), name:'Fondskonto'}, a2 = {id:uid(), name:'Aksjesparekonto'};
+  const f1 = {id:uid(), type:'fund', name:'Global Index Fund (demo)', accountId:a1.id, currency:'NOK'};
+  const f2 = {id:uid(), type:'fund', name:'Nordic Equity Fund (demo)', accountId:a1.id, currency:'NOK'};
+  const b = {id:uid(), type:'btc', name:'Bitcoin', accountId:a2.id, currency:'NOK'};
+  const s = {id:uid(), type:'ticker', name:'iShares Core S&P 500 UCITS ETF', symbol:'SXR8.DE', accountId:a2.id, currency:'EUR'};
+  const entries = [];
+  let paid = 50000, val = 50000, paid2 = 20000, val2 = 21000;
+  for(let k = 24; k >= 0; k -= 2){
+    const n = T - k * 30;
+    const g = 1 + 0.018 + 0.03 * Math.sin(k * 1.3);
+    val = val * g + 5000; paid += 5000;
+    val2 = val2 * (1 + 0.01 + 0.04 * Math.cos(k)) + 1000; paid2 += 1000;
+    // The oldest two entries have no return: they show as history only.
+    entries.push({id:uid(), holdingId:f1.id, date:dstr(n), value:Math.round(val), ret:k > 20 ? null : Math.round(val - paid)});
+    entries.push({id:uid(), holdingId:f2.id, date:dstr(n), value:Math.round(val2), ret:Math.round(val2 - paid2)});
+  }
+  D.accounts = [a1, a2]; D.holdings = [f1, f2, b, s]; D.entries = entries;
+  D.trades = [
+    {id:uid(), holdingId:b.id, date:dstr(T - 600), side:'buy', qty:0.02, amount:6500},
+    {id:uid(), holdingId:b.id, date:dstr(T - 300), side:'buy', qty:0.01, amount:7000},
+    {id:uid(), holdingId:s.id, date:dstr(T - 500), side:'buy', qty:10, price:480, fee:5},
+    {id:uid(), holdingId:s.id, date:dstr(T - 200), side:'buy', qty:5, price:560, fee:5}
+  ];
+  D.demo = true;
+  saveData(); render(); refreshMarket();
+}
+
+/* ================= events ================= */
+let toastTimer;
+function toast(msg){
+  let el = document.querySelector('.toast');
+  if(!el){ el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 2600);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button, [data-tab]');
+  if(!b) return;
+  const d = b.dataset;
+  if(d.tab){ tab = d.tab; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); return; }
+  if(d.period){ UI.period = d.period; saveUI(); render(); return; }
+  if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:1, inf:0, inv:1}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
+  if(d.v && b.parentElement.dataset.act === 'mode'){ UI.chartMode = d.v; saveUI(); render(); return; }
+  if(d.openHolding){ openPage({type:'holding', id:d.openHolding}); return; }
+  if(d.openAccount){ openPage({type:'account', id:d.openAccount}); return; }
+  if(d.editEntry){ const en = D.entries.find(x => x.id === d.editEntry); const h = en && D.holdings.find(x => x.id === en.holdingId); if(h) entryForm(h, en); return; }
+  if(d.editTrade){ const tr = D.trades.find(x => x.id === d.editTrade); const h = tr && D.holdings.find(x => x.id === tr.holdingId); if(h) tradeForm(h, tr); return; }
+  if(d.editAccount){ accountForm(D.accounts.find(x => x.id === d.editAccount)); return; }
+  if(d.delRate){ D.rateChanges = D.rateChanges.filter(x => x.month !== d.delRate); saveData(); render(); return; }
+  const h = page && page.type === 'holding' ? D.holdings.find(x => x.id === page.id) : null;
+  switch(d.act){
+    case 'refresh': refreshMarket(true); break;
+    case 'add-holding': holdingForm(); break;
+    case 'add-account': accountForm(); break;
+    case 'edit-holding': if(h) holdingForm(h); break;
+    case 'new-entry': if(h) entryForm(h); break;
+    case 'new-trade': if(h) tradeForm(h); break;
+    case 'stats': tab = 'stats'; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); break;
+    case 'back': history.back(); break;
+    case 'add-rate': rateForm(); break;
+    case 'export': exportBackup(); break;
+    case 'import': $('import-file').click(); break;
+    case 'demo': loadDemo(); break;
+    case 'demo-clear': { const s = D.settings; D = defaultData(); D.settings = s; saveData(); render(); break; }
+    case 'wipe': if(confirm(t('wipe_confirm'))){ const s = D.settings; D = defaultData(); D.settings = s; saveData(); render(); } break;
+    case 'all-months': UI.allMonths = true; render(); break;
+    case 'check-update': if(NATIVE && NATIVE.checkForUpdate) NATIVE.checkForUpdate(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(el.id === 'import-file' && el.files[0]){ importBackup(el.files[0]); el.value = ''; return; }
+  if(el.dataset.act === 'scope'){ UI.statsScope = el.value; saveUI(); render(); return; }
+  const k = el.dataset.set;
+  if(!k) return;
+  let v = el.value;
+  if(el.hasAttribute('data-pct')){ v = parseNum(v) / 100; if(!isFinite(v)){ toast(t('required')); return; } }
+  const before = D.settings[k];
+  D.settings[k] = v;
+  saveData();
+  if((k === 'baseCurrency' || k === 'inflSource') && before !== v) refreshMarket();
+  render();
+  if(k !== 'language' && k !== 'theme') toast(t('saved'));
+});
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { afterRender(document.body); }, 150); });
+
+/* ================= start ================= */
+D = normalize(loadJSON(LS_DATA)) || defaultData();
+C = Object.assign(emptyCache(), loadJSON(LS_CACHE) || {});
+UI = loadJSON(LS_UI) || {};
+tab = UI.tab || 'home';
+UI.allMonths = false;
+render();
+if(NATIVE && NATIVE.ready) NATIVE.ready();
+if(D.holdings.length && Date.now() - (C.at || 0) > 10 * 60e3) refreshMarket();
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && D.holdings.length && Date.now() - (C.at || 0) > 30 * 60e3) refreshMarket();
+});
+</script>
+</body>
+</html>
