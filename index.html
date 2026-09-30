@@ -299,8 +299,10 @@ const L = {
   compare_note:['Differences compare your gain with what the same deposits would have earned in the bank, in Bitcoin, or just keeping up with inflation.','Разлике пореде твоју зараду са оним што би исте уплате зарадиле у банци, у биткоину, или колико треба да прате инфлацију.','Differansene sammenligner avkastningen din med hva de samme innskuddene ville gitt i banken, i bitcoin, eller bare for å holde tritt med inflasjonen.'],
   btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
   import_tx:['Import transactions','Увоз трансакција','Importer transaksjoner'],
-  import_tx_hint:['Paste the transaction list from your bank or fund platform (copy the table, or a CSV file). Buys and sales are imported with their dates, units and prices; deposits and other rows are skipped. Rows already imported are not added twice.','Налепи листу трансакција из банке или платформе за фондове (копирај табелу или CSV фајл). Куповине и продаје се увозе са датумима, бројем удела и ценама; уплате на рачун и остали редови се прескачу. Већ увезени редови се не додају двапут.','Lim inn transaksjonslisten fra banken eller fondsplattformen (kopier tabellen eller en CSV-fil). Kjøp og salg importeres med dato, antall andeler og kurs; innskudd og andre rader hoppes over. Rader som allerede er importert, legges ikke inn på nytt.'],
-  import_file:['Choose file','Изабери фајл','Velg fil'],
+  import_tx_hint:['Choose the PDF or CSV statement from your bank or fund platform, or paste the transaction list. You can add several files (e.g. one per year) before importing. Buys and sales are imported with their dates, units and prices; deposits and other rows are skipped. Rows already imported are not added twice.','Изабери PDF или CSV извод из банке или платформе за фондове, или налепи листу трансакција. Можеш додати више фајлова (нпр. један за сваку годину) пре увоза. Куповине и продаје се увозе са датумима, бројем удела и ценама; уплате на рачун и остали редови се прескачу. Већ увезени редови се не додају двапут.','Velg PDF- eller CSV-utskriften fra banken eller fondsplattformen, eller lim inn transaksjonslisten. Du kan legge til flere filer (f.eks. én per år) før du importerer. Kjøp og salg importeres med dato, antall andeler og kurs; innskudd og andre rader hoppes over. Rader som allerede er importert, legges ikke inn på nytt.'],
+  import_file:['Choose file (PDF, CSV)','Изабери фајл (PDF, CSV)','Velg fil (PDF, CSV)'],
+  pdf_reading:['Reading PDF…','Читам PDF…','Leser PDF…'],
+  pdf_fail:['Could not read the PDF. Reading a PDF needs an internet connection; you can also copy its text and paste it here.','PDF није могао да се прочита. За читање PDF-а треба интернет; можеш и да копираш текст из PDF-а и налепиш га овде.','Kunne ikke lese PDF-en. Lesing av PDF krever internett; du kan også kopiere teksten og lime den inn her.'],
   import_read:['Read','Учитај','Les inn'],
   import_found:['{n} transactions in {f} funds','{n} трансакција у {f} фондова','{n} transaksjoner i {f} fond'],
   import_new_fund:['New fund','Нови фонд','Nytt fond'],
@@ -1671,7 +1673,7 @@ function txFromTokens(toks){
   if(di < 0) return null;
   const date = txDate(toks[di]);
   const rest = toks.slice(di + 1);
-  if(!rest.length) return {date, side:null};
+  if(!rest.length) return null;   // e.g. a page footer ending in a date
   const side = txSide(rest[0]);
   if(side === 'skip') return {date, side, type:rest[0]};
   let e = rest.length;
@@ -1757,6 +1759,48 @@ function parseTransactions(text){
   return {rows, skipped, bad};
 }
 
+// PDF statements: pdf.js is loaded only when a PDF is picked (needs internet then), so the app
+// stays small and offline otherwise. Text items are put back into lines by their position.
+const PDFJS = ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/'];
+let pdfjsReady = null;
+function loadScript(src){
+  return new Promise((ok, fail) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => { el.remove(); fail(new Error('script')); }; document.head.appendChild(el); });
+}
+function loadPdfJs(){
+  if(!pdfjsReady) pdfjsReady = (async () => {
+    for(const base of PDFJS){
+      try{
+        if(!window.pdfjsLib) await loadScript(base + 'pdf.min.js');
+        // A worker from another origin is not allowed; run it from a blob of the same script.
+        const w = await fetch(base + 'pdf.worker.min.js').then(r => { if(!r.ok) throw new Error('worker'); return r.text(); });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w], {type:'text/javascript'}));
+        return window.pdfjsLib;
+      }catch(e){}
+    }
+    throw new Error('pdfjs');
+  })().catch(e => { pdfjsReady = null; throw e; });
+  return pdfjsReady;
+}
+async function pdfToText(buf){
+  const lib = await loadPdfJs();
+  const doc = await lib.getDocument({data:buf}).promise;
+  const out = [];
+  for(let pn = 1; pn <= doc.numPages; pn++){
+    const tc = await (await doc.getPage(pn)).getTextContent();
+    const rows = [];
+    for(const it of tc.items){
+      if(!it.str || !it.str.trim()) continue;
+      const x = it.transform[4], y = it.transform[5];
+      let row = rows.find(r => Math.abs(r.y - y) < 3);
+      if(!row){ row = {y, items:[]}; rows.push(row); }
+      row.items.push({x, s:it.str});
+    }
+    rows.sort((a, b) => b.y - a.y);
+    for(const r of rows) out.push(r.items.sort((a, b) => a.x - b.x).map(i => i.s.trim()).join(' '));
+  }
+  return out.join('\n');
+}
+
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
@@ -1765,7 +1809,7 @@ function importTxForm(){
     <div class="hint">${t('import_tx_hint')}</div>
     <textarea class="inp" id="x-text" rows="7" style="font-size:13px;font-family:ui-monospace,monospace;resize:vertical" placeholder="2026-09-14\tKjøp\tKLP AksjeUSA Indeks N\t0,0388\t1 888,66\t73,28"></textarea>
     <div class="btnrow" style="margin:8px 0 12px"><button class="btn ghost small" id="x-file-b">${t('import_file')}</button><button class="btn small" id="x-read">${t('import_read')}</button></div>
-    <input type="file" id="x-file" accept=".csv,.txt,.tsv,text/*" class="hidden">
+    <input type="file" id="x-file" accept=".pdf,.csv,.txt,.tsv,application/pdf,text/*" class="hidden">
     <div class="row2">
       <label class="f"><span>${t('account')}</span><select class="inp" id="x-acc">${accOpts}</select></label>
       <label class="f"><span>${t('currency')}</span><select class="inp" id="x-cur">${CURRENCIES.map(c => `<option ${c === D.settings.baseCurrency ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
@@ -1832,12 +1876,20 @@ function importTxForm(){
     const read = () => { parsed = parseTransactions(sh.querySelector('#x-text').value); show(); };
     sh.querySelector('#x-read').onclick = read;
     sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
+    // Each picked file is added to the text, so several statements (e.g. one PDF per year) import together.
+    const addText = txt => { const ta = sh.querySelector('#x-text'); ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt; read(); };
     sh.querySelector('#x-file').onchange = ev => {
       const f = ev.target.files[0]; if(!f) return;
-      const rd = new FileReader();
-      rd.onload = () => { sh.querySelector('#x-text').value = rd.result; read(); };
-      rd.readAsText(f);
       ev.target.value = '';
+      const rd = new FileReader();
+      if(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'){
+        prev.innerHTML = `<div class="hint">${t('pdf_reading')}</div>`;
+        rd.onload = () => pdfToText(new Uint8Array(rd.result)).then(addText).catch(() => { prev.innerHTML = `<div class="hint">${t('pdf_fail')}</div>`; });
+        rd.readAsArrayBuffer(f);
+      } else {
+        rd.onload = () => addText(rd.result);
+        rd.readAsText(f);
+      }
     };
   });
 }
