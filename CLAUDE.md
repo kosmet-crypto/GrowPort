@@ -13,7 +13,8 @@ and comparing them with a hypothetical savings account, Bitcoin and inflation.
 | Path | What |
 |---|---|
 | `index.html` | The whole app: HTML, CSS and JS in one file, no build step, no dependencies |
-| `android/` | Small WebView wrapper (Java), copies `index.html` into the APK at build time |
+| `android/` | Small WebView wrapper (Java), copies `index.html` and `pdfjs/` into the APK at build time |
+| `pdfjs/` | Bundled Mozilla pdf.js for reading PDF statements offline (see `pdfjs/README.md`); only an APK update delivers changes here |
 | `android/app/src/main/java/app/growport/MainActivity.java` | WebView + `GrowPortAndroid` JS bridge (`http`, `saveFile`, `checkForUpdate`, …) |
 | `.../WebUpdater.java` | Downloads the latest `index.html` from `main`, falls back to the bundled page if it fails |
 | `.../ApkInstaller.java` | In-app APK update (sideload flavor only) |
@@ -42,6 +43,8 @@ and comparing them with a hypothetical savings account, Bitcoin and inflation.
   keep their bundled page until they update.
 - Keep `sideload` and `play` flavors working (`BuildConfig.SELF_UPDATE`); Play must never self-update.
 - `targetSdk` stays 34 (35 forces edge-to-edge, the page does not pad for system bars).
+- Privacy: imported files (PDF/CSV) are parsed on the device and never stored or sent; only the
+  parsed transactions are saved. Don't add network calls that carry user data.
 - The sideload keystore in the repo is intentional (every CI build must update the installed app).
 
 ## Checking changes

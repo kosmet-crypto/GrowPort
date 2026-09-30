@@ -3,9 +3,9 @@ name: Android APK
 on:
   push:
     branches: [main, 'claude/**']
-    paths: ['index.html', 'android/**', '.github/workflows/android.yml']
+    paths: ['index.html', 'pdfjs/**', 'android/**', '.github/workflows/android.yml']
   pull_request:
-    paths: ['index.html', 'android/**', '.github/workflows/android.yml']
+    paths: ['index.html', 'pdfjs/**', 'android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,10 +24,11 @@ jobs:
 
       # The Ubuntu runner ships the Android SDK (ANDROID_HOME); Gradle fetches any missing platform.
 
-      # Fingerprint of the Android part (not the web page). The app only offers an APK update when
-      # the newest release's fingerprint differs from its own; web-only changes come in through WebUpdater.
+      # Fingerprint of what only an APK can deliver: the Android part and the bundled pdf.js (not the
+      # web page). The app only offers an APK update when the newest release's fingerprint differs
+      # from its own; web-only changes come in through WebUpdater.
       - name: Fingerprint the Android part
-        run: echo "NATIVE_HASH=$(git ls-files -s android | sha1sum | cut -c1-12)" >> "$GITHUB_ENV"
+        run: echo "NATIVE_HASH=$(git ls-files -s android pdfjs | sha1sum | cut -c1-12)" >> "$GITHUB_ENV"
 
       # sideload: the APK people install from Releases (updates itself).
       # play: the same app without self-updating, for Google Play later.

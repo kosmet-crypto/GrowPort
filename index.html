@@ -1759,22 +1759,22 @@ function parseTransactions(text){
   return {rows, skipped, bad};
 }
 
-// PDF statements: pdf.js is loaded only when a PDF is picked (needs internet then), so the app
-// stays small and offline otherwise. Text items are put back into lines by their position.
-const PDFJS = ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/'];
+// PDF statements are read on the phone with Mozilla pdf.js, bundled in the APK next to this page
+// (pdfjs/, see pdfjs/README.md) and loaded only when a PDF is picked. Older APKs without it, or the
+// page opened on its own, fall back to the same version from jsDelivr. The PDF itself never leaves
+// the device; text items are put back into lines by their position.
+const PDFJS_CDN = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/legacy/build/';
+const PDFJS_SRC = [['pdfjs/pdf.min.js', 'pdfjs/pdf.worker.min.js'], [PDFJS_CDN + 'pdf.min.mjs', PDFJS_CDN + 'pdf.worker.min.mjs']];
 let pdfjsReady = null;
-function loadScript(src){
-  return new Promise((ok, fail) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => { el.remove(); fail(new Error('script')); }; document.head.appendChild(el); });
-}
 function loadPdfJs(){
   if(!pdfjsReady) pdfjsReady = (async () => {
-    for(const base of PDFJS){
+    for(const [lib, worker] of PDFJS_SRC){
       try{
-        if(!window.pdfjsLib) await loadScript(base + 'pdf.min.js');
-        // A worker from another origin is not allowed; run it from a blob of the same script.
-        const w = await fetch(base + 'pdf.worker.min.js').then(r => { if(!r.ok) throw new Error('worker'); return r.text(); });
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w], {type:'text/javascript'}));
-        return window.pdfjsLib;
+        const L = await import(new URL(lib, location.href).href);
+        // Run the worker from a blob of the same script (a worker from another origin is not allowed).
+        const w = await fetch(new URL(worker, location.href).href).then(r => { if(!r.ok) throw new Error('worker'); return r.text(); });
+        L.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w], {type:'text/javascript'}));
+        return L;
       }catch(e){}
     }
     throw new Error('pdfjs');
@@ -1783,7 +1783,8 @@ function loadPdfJs(){
 }
 async function pdfToText(buf){
   const lib = await loadPdfJs();
-  const doc = await lib.getDocument({data:buf}).promise;
+  // Text only: no script evaluation, no fonts or other files fetched.
+  const doc = await lib.getDocument({data:buf, isEvalSupported:false, disableFontFace:true, useSystemFonts:false, enableXfa:false}).promise;
   const out = [];
   for(let pn = 1; pn <= doc.numPages; pn++){
     const tc = await (await doc.getPage(pn)).getTextContent();
