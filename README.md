@@ -5,7 +5,8 @@ Personal Android app for tracking funds and investments, and comparing them with
 See [SPEC.md](SPEC.md) for the agreed design (in Serbian).
 
 ## Features
-* Holdings grouped in accounts: funds (value + return entered by hand), Bitcoin you own, stocks/ETFs (live price).
+* Holdings grouped in accounts: funds (value + return entered by hand, or purchases with units and price), Bitcoin you own, stocks/ETFs (live price).
+* Import transactions pasted from a bank or fund platform (table copy or CSV); the comparison then starts from the real purchase dates.
 * For every deposit the app simulates the same money going into a savings account (interest credited on the 1st of each month, rate editable per period), into Bitcoin (with a purchase fee) and keeping up with inflation.
 * Overview with total value, gain, the difference against bank / Bitcoin / inflation in money and as a ratio, and a main chart (value or difference view).
 * Detailed statistics: total and annual return (XIRR), largest drop, by holding, by month.
