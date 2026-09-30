@@ -99,8 +99,16 @@ h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:
 .item .right{text-align:right;flex:none}
 .item .val{font-weight:600;font-variant-numeric:tabular-nums}
 .item .chg{font-size:12px}
-.acc-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
+.acc-head{display:block;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
 .acc-head .name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.acc-head{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.acc-head .lft{display:flex;align-items:center;gap:6px;min-width:0;flex:1;margin-right:8px}
+.acc-head .chev{display:inline-flex;color:var(--ink2);transition:transform .15s;transform:rotate(-90deg);flex:none}
+.acc-head.open .chev{transform:rotate(0)}
+.acc-head .cnt{font-size:12px;color:var(--ink2);font-weight:400;flex:none}
+.acc-head .top{display:flex;justify-content:space-between;align-items:center}
+.acc-head .sub{font-size:12px;margin:-4px 0 0 24px}
+.list.closed .acc-head{border-bottom:0}
 .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);margin-left:4px}
 .badge.warn{color:var(--warn)}
 .ticon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:700;font-size:13px;color:#fff}
@@ -290,6 +298,22 @@ const L = {
   required:['Fill in the required fields','Попуни обавезна поља','Fyll ut feltene'],
   compare_note:['Differences compare your gain with what the same deposits would have earned in the bank, in Bitcoin, or just keeping up with inflation.','Разлике пореде твоју зараду са оним што би исте уплате зарадиле у банци, у биткоину, или колико треба да прате инфлацију.','Differansene sammenligner avkastningen din med hva de samme innskuddene ville gitt i banken, i bitcoin, eller bare for å holde tritt med inflasjonen.'],
   btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
+  import_tx:['Import transactions','Увоз трансакција','Importer transaksjoner'],
+  import_tx_hint:['Paste the transaction list from your bank or fund platform (copy the table, or a CSV file). Buys and sales are imported with their dates, units and prices; deposits and other rows are skipped. Rows already imported are not added twice.','Налепи листу трансакција из банке или платформе за фондове (копирај табелу или CSV фајл). Куповине и продаје се увозе са датумима, бројем удела и ценама; уплате на рачун и остали редови се прескачу. Већ увезени редови се не додају двапут.','Lim inn transaksjonslisten fra banken eller fondsplattformen (kopier tabellen eller en CSV-fil). Kjøp og salg importeres med dato, antall andeler og kurs; innskudd og andre rader hoppes over. Rader som allerede er importert, legges ikke inn på nytt.'],
+  import_file:['Choose file','Изабери фајл','Velg fil'],
+  import_read:['Read','Учитај','Les inn'],
+  import_found:['{n} transactions in {f} funds','{n} трансакција у {f} фондова','{n} transaksjoner i {f} fond'],
+  import_new_fund:['New fund','Нови фонд','Nytt fond'],
+  import_skipped:['Skipped','Прескочено','Hoppet over'],
+  import_bad_rows:['{n} rows could not be read','{n} редова није могло да се прочита','{n} rader kunne ikke leses'],
+  import_none:['No buys or sales found. Each row needs a date, buy/sell, name, units, price and total.','Нису пронађене куповине ни продаје. Сваки ред треба да има датум, куповину/продају, назив, број удела, цену и укупан износ.','Fant ingen kjøp eller salg. Hver rad trenger dato, kjøp/salg, navn, antall, kurs og totalt.'],
+  import_go:['Import {n} transactions','Увези {n} трансакција','Importer {n} transaksjoner'],
+  import_done:['Imported {n} transactions','Увезено {n} трансакција','Importerte {n} transaksjoner'],
+  import_dup:['{n} already there','{n} већ постоји','{n} fantes fra før'],
+  fund_tx_hint:['The value follows units × the last known price (from purchases and value entries). Add a new entry with today\'s value to keep it current.','Вредност је број удела × последња позната цена (из куповина и уноса вредности). Додај нови унос са данашњом вредношћу да би била ажурна.','Verdien er antall andeler × siste kjente kurs (fra kjøp og registreringer). Legg inn dagens verdi for å holde den oppdatert.'],
+  rename:['Rename','Промени назив','Endre navn'],
+  new_account:['+ New account','+ Нови рачун','+ Ny konto'],
+  new_account_name:['Name of the new account','Назив новог рачуна','Navn på den nye kontoen'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -625,6 +649,8 @@ function buildEngine(){
   function blank(){ return new Array(len).fill(null); }
 
   function computeFund(h){
+    // A fund with imported/entered purchases is tracked from the purchases (see computeTrades).
+    if(D.trades.some(e => e.holdingId === h.id)) return computeTrades(h);
     const cur = h.currency || base;
     const es = D.entries.filter(e => e.holdingId === h.id && dnum(e.date) <= T)
       .map(e => ({n:dnum(e.date), v:e.value, ret:e.ret}))
@@ -658,9 +684,35 @@ function buildEngine(){
     return res;
   }
 
+  // Unit price of a fund on day n: straight line between known prices (purchase prices and
+  // value entries divided by the units held that day), the last known price after that.
+  function fundPricer(h, ts){
+    const pts = {};
+    for(const e of ts) if(e.price > 0) pts[e.n] = e.price;
+    for(const en of D.entries){
+      if(en.holdingId !== h.id || !(en.value > 0)) continue;
+      const n = dnum(en.date);
+      if(n > T) continue;
+      let q = 0;
+      for(const e of ts) if(e.n <= n) q += e.side === 'sell' ? -e.qty : e.qty;
+      if(q > 1e-9) pts[n] = en.value / q;
+    }
+    const ps = Object.keys(pts).map(Number).sort((a, b) => a - b).map(n => ({n, p:pts[n]}));
+    const price = n => {
+      if(!ps.length) return null;
+      if(n <= ps[0].n) return ps[0].p;
+      let k = 0;
+      while(k + 1 < ps.length && ps[k + 1].n <= n) k++;
+      if(k + 1 >= ps.length) return ps[k].p;
+      const a = ps[k], b = ps[k + 1];
+      return a.p + (b.p - a.p) * (n - a.n) / (b.n - a.n);
+    };
+    return {price, points:ps};
+  }
+
   function computeTrades(h){
-    const isBtc = h.type === 'btc';
-    const cur = isBtc ? (h.currency || base) : (h.currency || (C.tick[h.symbol] && C.tick[h.symbol].currency) || base);
+    const isBtc = h.type === 'btc', isFund = h.type === 'fund';
+    const cur = isBtc || isFund ? (h.currency || base) : (h.currency || (C.tick[h.symbol] && C.tick[h.symbol].currency) || base);
     const ts = D.trades.filter(e => e.holdingId === h.id && dnum(e.date) <= T)
       .map(e => ({n:dnum(e.date), side:e.side, qty:+e.qty || 0, amount:+e.amount || 0, price:+e.price || 0, fee:+e.fee || 0}))
       .sort((a, b) => a.n - b.n);
@@ -673,7 +725,12 @@ function buildEngine(){
       const gross = isBtc ? e.amount : e.qty * e.price + (e.side === 'sell' ? -e.fee : e.fee);
       res.flows.push({n:e.n, amt:(e.side === 'sell' ? -gross : gross) * m});
     }
-    const tick = !isBtc && C.tick[h.symbol] ? makeSeries(C.tick[h.symbol].prices) : null;
+    const tick = !isBtc && !isFund && C.tick[h.symbol] ? makeSeries(C.tick[h.symbol].prices) : null;
+    const fp = isFund ? fundPricer(h, ts) : null;
+    if(fp){
+      res.dots = fp.points.map(x => x.n - N0);
+      res.lastEntry = fp.points.length ? fp.points[fp.points.length - 1].n : ts[ts.length - 1].n;
+    }
     let qty = 0, k = 0, lastPrice = null;
     for(let i = 0; i < len; i++){
       const n = N0 + i;
@@ -686,6 +743,7 @@ function buildEngine(){
       if(n < ts[0].n) continue;
       let p;
       if(isBtc) p = btcPrice(n);
+      else if(fp){ const q = fp.price(n); const m = fx(cur, n); p = q != null && m != null ? q * m : null; }
       else { const q = tick && tick.at(n); const m = fx(cur, n); p = q != null && m != null ? q * m : null; }
       if(p == null && lastPrice){ const m = isBtc ? fx(cur, lastPrice.n) : fx(cur, n); if(m != null){ p = lastPrice.unit * m; res.warn = res.warn || 'price'; } }
       res.act[i] = p == null ? null : qty * p;
@@ -979,6 +1037,8 @@ function niceTicks(min, max, n){
 /* ================= views ================= */
 let tab = 'home';
 const ICONS = {
+  chev:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  fwd:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
   holdings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg>',
   stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>',
@@ -1093,9 +1153,13 @@ function holdingsList(compact){
     const hs = D.holdings.filter(h => h.accountId === a.id);
     if(!hs.length && compact) continue;
     const m = metrics(E.account(a.id));
-    html += `<div class="list"><button class="acc-head" data-open-account="${a.id}"><span class="name">${esc(a.name)}</span>
-      <span style="text-align:right">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}${m && m.tracked ? `<br><span class="${signCls(m.gain - m.bankGain)}" style="font-size:12px">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</span>` : ''}</span></button>
-      ${hs.map(holdingRow).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
+    // Tapping the header folds the account open or closed (remembered); the arrow opens its page.
+    const open = !(UI.closedAcc || {})[a.id];
+    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain - m.bankGain)}">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</div>` : '';
+    html += `<div class="list ${open ? '' : 'closed'}"><div class="acc-head ${open ? 'open' : ''}" data-toggle-account="${a.id}" role="button" aria-expanded="${open}">
+      <div class="top"><span class="lft"><span class="chev">${ICONS.chev}</span><span class="name">${esc(a.name)}</span><span class="cnt">${hs.length}</span></span>
+      <span class="rgt">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}<button class="iconbtn" data-open-account="${a.id}" aria-label="${esc(a.name)}">${ICONS.fwd}</button></span></div>${diff}</div>
+      ${open ? hs.map(holdingRow).join('') || `<div class="item muted">${t('no_entries')}</div>` : ''}</div>`;
   }
   return html;
 }
@@ -1103,6 +1167,7 @@ function viewHoldings(){
   let html = topBar() + demoBanner();
   html += holdingsList(false);
   html += `<div class="btnrow"><button class="btn" data-act="add-holding">${t('add_holding')}</button><button class="btn ghost" data-act="add-account">${t('add_account')}</button></div>`;
+  html += `<button class="btn ghost" style="margin-top:8px" data-act="import-tx">${t('import_tx')}</button>`;
   return html;
 }
 
@@ -1220,6 +1285,7 @@ function viewSettings(){
   <div class="card">
     <div class="btnrow" style="margin-bottom:8px"><button class="btn ghost" data-act="export">${t('export')}</button><button class="btn ghost" data-act="import">${t('import')}</button></div>
     <input type="file" id="import-file" accept=".json,application/json,*/*" class="hidden">
+    <button class="btn ghost" data-act="import-tx" style="margin-bottom:8px">${t('import_tx')}</button>
     ${D.holdings.length ? '' : `<button class="btn ghost" data-act="demo" style="margin-bottom:8px">${t('demo')}</button>`}
     <button class="btn danger" data-act="wipe">${t('wipe')}</button>
   </div>
@@ -1250,15 +1316,25 @@ function renderPage(){
     if(!m) body += `<div class="card empty-chart">${t('chart_empty')}</div>`;
     body += tilesHtml(m, h.type === 'btc');
     if(m) body += chartCard(A, 'chart-page');
-    body += `<div class="btnrow" style="margin-bottom:6px"><button class="btn" data-act="${h.type === 'fund' ? 'new-entry' : 'new-trade'}">${h.type === 'fund' ? t('new_entry') : t('new_trade')}</button>
-      <button class="btn ghost" data-act="edit-holding">${t('edit')}</button></div>`;
-    body += h.type === 'fund' ? entriesList(h) : tradesList(h);
+    if(h.type === 'fund'){
+      const hasTx = D.trades.some(e => e.holdingId === h.id);
+      body += `<div class="btnrow" style="margin-bottom:8px"><button class="btn" data-act="new-entry">${t('new_entry')}</button>
+        <button class="btn ghost" data-act="new-trade">${t('new_trade')}</button></div>
+        <button class="btn ghost" style="margin-bottom:6px" data-act="edit-holding">${t('edit')}</button>`;
+      if(hasTx) body += `<div class="sectnote">${t('fund_tx_hint')}</div>` + tradesList(h);
+      body += entriesList(h);
+    } else {
+      body += `<div class="btnrow" style="margin-bottom:6px"><button class="btn" data-act="new-trade">${t('new_trade')}</button>
+        <button class="btn ghost" data-act="edit-holding">${t('edit')}</button></div>`;
+      body += tradesList(h);
+    }
   } else {
     const a = D.accounts.find(x => x.id === page.id);
     if(!a){ page = null; if(el) el.remove(); return; }
     title = a.name; A = E.account(a.id);
     const m = metrics(A);
     body += heroCard(m, t('account')) + tilesHtml(m) + (m ? chartCard(A, 'chart-page') : '');
+    body += `<button class="btn ghost" style="margin-bottom:12px" data-act="edit-account">${t('rename')}</button>`;
     const hs = D.holdings.filter(h => h.accountId === a.id);
     body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
   }
@@ -1281,7 +1357,7 @@ function tradesList(h){
   return `<h2>${t('trades')}</h2><div class="list">${ts.map(e => {
     const total = h.type === 'btc' ? e.amount : e.qty * e.price + (e.side === 'sell' ? -(e.fee || 0) : (e.fee || 0));
     return `<button class="item" data-edit-trade="${e.id}"><div class="main"><div class="name">${t(e.side)} · ${esc(fmtDate(e.date))}</div>
-      <div class="meta">${esc(fmtNum(e.qty, 8))} ${h.type === 'btc' ? 'BTC' : ''}${h.type === 'ticker' ? ' × ' + esc(fmtMoney(e.price, {cur, digits:2})) : ''}</div></div>
+      <div class="meta">${esc(fmtNum(e.qty, 8))} ${h.type === 'btc' ? 'BTC' : ''}${h.type !== 'btc' ? ' × ' + esc(fmtMoney(e.price, {cur, digits:2})) : ''}</div></div>
       <div class="right"><div class="val">${esc(fmtMoney(total, {cur}))}</div></div></button>`;
   }).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
 }
@@ -1536,6 +1612,236 @@ function importBackup(file){
   rd.readAsText(file);
 }
 
+/* ================= transaction import ================= */
+// Reads a transaction list pasted from a bank or fund platform (table copy, CSV or plain text):
+// date, type (buy/sell), security name, units, price per unit, total. Other rows (deposits,
+// dividends, fees…) are skipped. Numbers may use Norwegian formatting ("1 888,66").
+const TX_BUY = ['kjøp', 'kjop', 'køb', 'köp', 'buy', 'bought', 'purchase', 'subscription', 'tegning', 'spareavtale', 'reinvest', 'kupovina', 'куповина'];
+const TX_SELL = ['salg', 'sell', 'sold', 'sale', 'sälj', 'innløsning', 'innlosning', 'redemption', 'prodaja', 'продаја'];
+const TX_HEAD = {
+  date:['dato', 'date', 'handelsdag', 'handelsdato', 'transaksjonsdato', 'bokføringsdag', 'datum', 'датум'],
+  type:['transaksjonstype', 'type', 'transaction', 'transaksjon', 'tip', 'тип'],
+  name:['verdipapir', 'fond', 'navn', 'name', 'security', 'instrument', 'fund', 'naziv', 'назив'],
+  qty:['antall', 'andeler', 'enheter', 'units', 'quantity', 'shares', 'kolicina', 'količina', 'количина'],
+  price:['pris', 'kurs', 'price', 'nav', 'cena', 'цена', 'курс'],
+  total:['totalt', 'beløp', 'belop', 'amount', 'total', 'sum', 'iznos', 'износ', 'укупно']
+};
+function txDate(s){
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/);
+  if(m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return null;
+}
+function txSide(s){
+  const w = String(s || '').toLowerCase().trim();
+  if(!w) return null;
+  if(TX_BUY.some(k => w.startsWith(k))) return 'buy';
+  if(TX_SELL.some(k => w.startsWith(k))) return 'sell';
+  return 'skip';
+}
+function txNum(s){
+  s = String(s || '').replace(/[−–]/g, '-').replace(/\b(NOK|EUR|USD|SEK|DKK|GBP|CHF|kr)\b\.?/gi, '').trim();
+  if(!/^[-+]?[\d\s  .,']+$/.test(s) || !/\d/.test(s)) return NaN;
+  return parseNum(s);
+}
+function txOk(q, p, tot){ return q > 0 && p > 0 && Math.abs(q * p - Math.abs(tot)) <= Math.max(0.03 * Math.abs(tot), 0.05); }
+// Picks units, price and total from a row's numbers: the three in a row where units × price ≈ total.
+function txTriple(nums){
+  for(let i = nums.length - 3; i >= 0; i--) if(txOk(nums[i], nums[i + 1], nums[i + 2])) return {at:i, qty:nums[i], price:nums[i + 1], total:Math.abs(nums[i + 2])};
+  return null;
+}
+function splitCells(line, delim){
+  if(delim === '\t') return line.split('\t').map(s => s.trim());
+  const out = []; let cur = '', q = false;
+  for(const ch of line){
+    if(ch === '"'){ q = !q; continue; }
+    if(ch === delim && !q){ out.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+// Plain text (e.g. copied from a PDF): tokens after the date are type, name, then numbers at the end.
+// Thousands separated by spaces ("1 888,66") make the split ambiguous, so every way of joining
+// neighbouring number tokens is tried and the one where units × price ≈ total wins.
+function txFromTokens(toks){
+  const di = toks.findIndex(x => txDate(x));
+  if(di < 0) return null;
+  const date = txDate(toks[di]);
+  const rest = toks.slice(di + 1);
+  if(!rest.length) return {date, side:null};
+  const side = txSide(rest[0]);
+  if(side === 'skip') return {date, side, type:rest[0]};
+  let e = rest.length;
+  while(e > 1 && /^[-−+]?[\d.,']+$/.test(rest[e - 1])) e--;
+  const numToks = rest.slice(e), nameToks = rest.slice(1, e);
+  let best = null;
+  const walk = (i, groups) => {
+    if(i === numToks.length){
+      const nums = groups.map(g => txNum(g.join('')));
+      const tr = txTriple(nums);
+      if(tr && (!best || tr.at + 3 > best.end)) best = {tr, groups, end:tr.at + 3};
+      return;
+    }
+    const tok = numToks[i], last = groups[groups.length - 1];
+    walk(i + 1, groups.concat([[tok]]));
+    if(last && /^\d{3}([.,]\d+)?$/.test(tok) && /^[-−]?\d{1,3}$/.test(last[last.length - 1]) && !/[.,]/.test(last.join('')))
+      walk(i + 1, groups.slice(0, -1).concat([last.concat([tok])]));
+  };
+  if(numToks.length <= 12) walk(0, []);
+  if(!best) return {date, side, bad:true};
+  const extra = best.groups.slice(0, best.tr.at).map(g => g.join(' '));
+  return {date, side, name:nameToks.concat(extra).join(' ').trim(), qty:best.tr.qty, price:best.tr.price, total:best.tr.total};
+}
+function txFromCells(cells, cols){
+  if(cols){
+    const g = k => cols[k] != null ? cells[cols[k]] : undefined;
+    const date = txDate(g('date'));
+    if(!date) return null;
+    const side = cols.type != null ? txSide(g('type')) : 'buy';
+    if(side === 'skip' || !side) return {date, side:side || 'skip', type:g('type')};
+    let qty = Math.abs(txNum(g('qty'))), price = txNum(g('price')), total = Math.abs(txNum(g('total')));
+    if(!(price > 0) && qty > 0 && total > 0) price = total / qty;
+    if(!(total > 0) && qty > 0 && price > 0) total = qty * price;
+    if(!(qty > 0) || !(price > 0)) return {date, side, bad:true};
+    return {date, side, name:String(g('name') || '').trim(), qty, price, total};
+  }
+  const di = cells.findIndex(c => txDate(c));
+  if(di < 0) return null;
+  const date = txDate(cells[di]);
+  let side = null, ti = -1;
+  cells.forEach((c, i) => { if(ti < 0 && i !== di && /^\p{L}/u.test(c) && txSide(c) !== 'skip'){ side = txSide(c); ti = i; } });
+  if(ti < 0){ const tc = cells.find((c, i) => i > di && /^\p{L}/u.test(c)); return {date, side:'skip', type:tc || ''}; }
+  const nums = [], names = [];
+  cells.forEach((c, i) => {
+    if(i === di || i === ti) return;
+    const v = txNum(c);
+    if(isFinite(v)) nums.push(v); else if(c && c !== '-') names.push(c);
+  });
+  const tr = txTriple(nums);
+  if(!tr) return {date, side, bad:true};
+  return {date, side, name:names.sort((a, b) => b.length - a.length)[0] || '', qty:tr.qty, price:tr.price, total:tr.total};
+}
+function parseTransactions(text){
+  const lines = String(text || '').replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim());
+  const count = ch => lines.filter(l => l.includes(ch)).length;
+  const commaCsv = lines.length && (lines[0].match(/,/g) || []).length >= 3 && !/\d/.test(lines[0]);
+  const delim = count('\t') >= lines.length / 2 ? '\t' : count(';') >= lines.length / 2 ? ';' : commaCsv ? ',' : null;
+  let cols = null;
+  const rows = [], skipped = {}; let bad = 0;
+  for(const line of lines){
+    let r;
+    if(delim){
+      const cells = splitCells(line, delim);
+      if(!cells.some(c => txDate(c))){
+        // Header row: map columns by name, earlier words in TX_HEAD win ("Beløp" before "Totale avgifter").
+        const m = {}, low = cells.map(c => c.toLowerCase());
+        for(const k of ['date', 'type', 'qty', 'price', 'total', 'name']){
+          for(const w of TX_HEAD[k]){
+            const i = low.findIndex((c, j) => c.includes(w) && !Object.values(m).includes(j));
+            if(i >= 0){ m[k] = i; break; }
+          }
+        }
+        if(m.date != null && m.qty != null) cols = m;
+        continue;
+      }
+      r = txFromCells(cells, cols);
+    } else r = txFromTokens(line.trim().split(/\s+/));
+    if(!r) continue;
+    if(r.side === 'skip' || !r.side){ const k = String(r.type || '?').trim() || '?'; skipped[k] = (skipped[k] || 0) + 1; continue; }
+    if(r.bad || !r.name){ bad++; continue; }
+    rows.push(r);
+  }
+  return {rows, skipped, bad};
+}
+
+function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function importTxForm(){
+  const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
+  const accOpts = accountOptions(defAcc) + `<option value="+">${esc(t('new_account'))}</option>`;
+  openSheet(`<h3>${t('import_tx')}</h3>
+    <div class="hint">${t('import_tx_hint')}</div>
+    <textarea class="inp" id="x-text" rows="7" style="font-size:13px;font-family:ui-monospace,monospace;resize:vertical" placeholder="2026-09-14\tKjøp\tKLP AksjeUSA Indeks N\t0,0388\t1 888,66\t73,28"></textarea>
+    <div class="btnrow" style="margin:8px 0 12px"><button class="btn ghost small" id="x-file-b">${t('import_file')}</button><button class="btn small" id="x-read">${t('import_read')}</button></div>
+    <input type="file" id="x-file" accept=".csv,.txt,.tsv,text/*" class="hidden">
+    <div class="row2">
+      <label class="f"><span>${t('account')}</span><select class="inp" id="x-acc">${accOpts}</select></label>
+      <label class="f"><span>${t('currency')}</span><select class="inp" id="x-cur">${CURRENCIES.map(c => `<option ${c === D.settings.baseCurrency ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+    </div>
+    <label class="f hidden" id="x-accname-w"><span>${t('new_account_name')}</span><input class="inp" id="x-accname" placeholder="Fond 4, Kron, ASK…"></label>
+    <div id="x-prev"></div>`,
+  sh => {
+    let parsed = null;
+    const prev = sh.querySelector('#x-prev');
+    const targetOptions = name => {
+      const k = txKey(name);
+      const hs = D.holdings.filter(h => h.type !== 'btc');
+      const match = hs.find(h => txKey(h.name) === k);
+      return `<option value="">${esc(t('import_new_fund'))}</option>` + hs.map(h => `<option value="${h.id}" ${match === h ? 'selected' : ''}>${esc(h.name)}</option>`).join('');
+    };
+    const show = () => {
+      const {rows, skipped, bad} = parsed;
+      if(!rows.length){ prev.innerHTML = `<div class="hint">${t('import_none')}</div>`; return; }
+      const groups = {};
+      rows.forEach(r => { const k = txKey(r.name); (groups[k] = groups[k] || {name:r.name, rows:[]}).rows.push(r); });
+      const sk = Object.entries(skipped).map(([k, n]) => `${esc(k)} ×${n}`).join(', ');
+      prev.innerHTML = `<div style="font-weight:600;margin:4px 0 8px">${esc(t('import_found', {n:rows.length, f:Object.keys(groups).length}))}</div>
+        ${Object.entries(groups).map(([k, g]) => {
+          const dates = g.rows.map(r => r.date).sort();
+          const sum = g.rows.reduce((s, r) => s + (r.side === 'sell' ? -r.total : r.total), 0);
+          return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div style="font-weight:600">${esc(g.name)}</div>
+            <div class="hint" style="margin:2px 0 6px">${g.rows.length} · ${esc(fmtDate(dates[0]))} – ${esc(fmtDate(dates[dates.length - 1]))} · ${esc(fmtNum(sum, 2))}</div>
+            <select class="inp" data-grp="${esc(k)}">${targetOptions(g.name)}</select></div>`;
+        }).join('')}
+        ${sk ? `<div class="hint">${t('import_skipped')}: ${sk}</div>` : ''}
+        ${bad ? `<div class="hint">${esc(t('import_bad_rows', {n:bad}))}</div>` : ''}
+        <button class="btn" id="x-go" style="margin-top:8px">${esc(t('import_go', {n:rows.length}))}</button>`;
+      prev.querySelector('#x-go').onclick = () => {
+        let acc = sh.querySelector('#x-acc').value;
+        if(acc === '+'){
+          const nm = sh.querySelector('#x-accname').value.trim();
+          if(!nm){ toast(t('required')); return; }
+          const na = {id:uid(), name:nm}; D.accounts.push(na); acc = na.id;
+        }
+        const cur = sh.querySelector('#x-cur').value;
+        let added = 0, dup = 0;
+        for(const [k, g] of Object.entries(groups)){
+          let hid = prev.querySelector(`select[data-grp="${CSS.escape(k)}"]`).value;
+          if(!hid){
+            const nh = {id:uid(), type:'fund', name:g.name, accountId:acc, currency:cur};
+            D.holdings.push(nh); hid = nh.id;
+          }
+          for(const r of g.rows){
+            if(D.trades.some(x => x.holdingId === hid && x.date === r.date && x.side === r.side && Math.abs(x.qty - r.qty) < 1e-9)){ dup++; continue; }
+            // Keep the platform's total exact: the rounding difference goes into the fee.
+            const fee = Math.round((r.side === 'sell' ? r.qty * r.price - r.total : r.total - r.qty * r.price) * 100) / 100;
+            D.trades.push({id:uid(), holdingId:hid, date:r.date, side:r.side, qty:r.qty, price:r.price, fee});
+            added++;
+          }
+        }
+        saveData(); closeSheet();
+        toast(t('import_done', {n:added}) + (dup ? ' · ' + t('import_dup', {n:dup}) : ''));
+        render(); if(page) renderPage(); refreshMarket();
+      };
+    };
+    const accSel = sh.querySelector('#x-acc');
+    const syncAcc = () => sh.querySelector('#x-accname-w').classList.toggle('hidden', accSel.value !== '+');
+    accSel.onchange = syncAcc; syncAcc();
+    const read = () => { parsed = parseTransactions(sh.querySelector('#x-text').value); show(); };
+    sh.querySelector('#x-read').onclick = read;
+    sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
+    sh.querySelector('#x-file').onchange = ev => {
+      const f = ev.target.files[0]; if(!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { sh.querySelector('#x-text').value = rd.result; read(); };
+      rd.readAsText(f);
+      ev.target.value = '';
+    };
+  });
+}
+
 /* ================= demo data ================= */
 function loadDemo(){
   const T = dnum(todayStr());
@@ -1576,7 +1882,7 @@ function toast(msg){
 }
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('button, [data-tab]');
+  const b = e.target.closest('button, [data-tab], [data-toggle-account]');
   if(!b) return;
   const d = b.dataset;
   if(d.tab){ tab = d.tab; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); return; }
@@ -1584,6 +1890,7 @@ document.addEventListener('click', e => {
   if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:1, inf:0, inv:1}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
   if(d.v && b.parentElement.dataset.act === 'mode'){ UI.chartMode = d.v; saveUI(); render(); return; }
   if(d.openHolding){ openPage({type:'holding', id:d.openHolding}); return; }
+  if(d.toggleAccount){ UI.closedAcc = Object.assign({}, UI.closedAcc); if(UI.closedAcc[d.toggleAccount]) delete UI.closedAcc[d.toggleAccount]; else UI.closedAcc[d.toggleAccount] = 1; saveUI(); render(); return; }
   if(d.openAccount){ openPage({type:'account', id:d.openAccount}); return; }
   if(d.editEntry){ const en = D.entries.find(x => x.id === d.editEntry); const h = en && D.holdings.find(x => x.id === en.holdingId); if(h) entryForm(h, en); return; }
   if(d.editTrade){ const tr = D.trades.find(x => x.id === d.editTrade); const h = tr && D.holdings.find(x => x.id === tr.holdingId); if(h) tradeForm(h, tr); return; }
@@ -1595,6 +1902,7 @@ document.addEventListener('click', e => {
     case 'add-holding': holdingForm(); break;
     case 'add-account': accountForm(); break;
     case 'edit-holding': if(h) holdingForm(h); break;
+    case 'edit-account': if(page && page.type === 'account') accountForm(D.accounts.find(x => x.id === page.id)); break;
     case 'new-entry': if(h) entryForm(h); break;
     case 'new-trade': if(h) tradeForm(h); break;
     case 'stats': tab = 'stats'; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); break;
@@ -1602,6 +1910,7 @@ document.addEventListener('click', e => {
     case 'add-rate': rateForm(); break;
     case 'export': exportBackup(); break;
     case 'import': $('import-file').click(); break;
+    case 'import-tx': importTxForm(); break;
     case 'demo': loadDemo(); break;
     case 'demo-clear': { const s = D.settings; D = defaultData(); D.settings = s; saveData(); render(); break; }
     case 'wipe': if(confirm(t('wipe_confirm'))){ const s = D.settings; D = defaultData(); D.settings = s; saveData(); render(); } break;
