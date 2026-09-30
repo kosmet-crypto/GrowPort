@@ -7,6 +7,7 @@ def webRoot = rootProject.file('..')
 tasks.register('copyWebApp', Copy) {
     from(webRoot) {
         include 'index.html'
+        include 'pdfjs/**'
     }
     into 'src/main/assets/www'
 }
