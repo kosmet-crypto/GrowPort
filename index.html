@@ -99,8 +99,16 @@ h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:
 .item .right{text-align:right;flex:none}
 .item .val{font-weight:600;font-variant-numeric:tabular-nums}
 .item .chg{font-size:12px}
-.acc-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
+.acc-head{display:block;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
 .acc-head .name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.acc-head{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.acc-head .lft{display:flex;align-items:center;gap:6px;min-width:0;flex:1;margin-right:8px}
+.acc-head .chev{display:inline-flex;color:var(--ink2);transition:transform .15s;transform:rotate(-90deg);flex:none}
+.acc-head.open .chev{transform:rotate(0)}
+.acc-head .cnt{font-size:12px;color:var(--ink2);font-weight:400;flex:none}
+.acc-head .top{display:flex;justify-content:space-between;align-items:center}
+.acc-head .sub{font-size:12px;margin:-4px 0 0 24px}
+.list.closed .acc-head{border-bottom:0}
 .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);margin-left:4px}
 .badge.warn{color:var(--warn)}
 .ticon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:700;font-size:13px;color:#fff}
@@ -303,6 +311,9 @@ const L = {
   import_done:['Imported {n} transactions','Увезено {n} трансакција','Importerte {n} transaksjoner'],
   import_dup:['{n} already there','{n} већ постоји','{n} fantes fra før'],
   fund_tx_hint:['The value follows units × the last known price (from purchases and value entries). Add a new entry with today\'s value to keep it current.','Вредност је број удела × последња позната цена (из куповина и уноса вредности). Додај нови унос са данашњом вредношћу да би била ажурна.','Verdien er antall andeler × siste kjente kurs (fra kjøp og registreringer). Legg inn dagens verdi for å holde den oppdatert.'],
+  rename:['Rename','Промени назив','Endre navn'],
+  new_account:['+ New account','+ Нови рачун','+ Ny konto'],
+  new_account_name:['Name of the new account','Назив новог рачуна','Navn på den nye kontoen'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -1026,6 +1037,8 @@ function niceTicks(min, max, n){
 /* ================= views ================= */
 let tab = 'home';
 const ICONS = {
+  chev:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  fwd:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
   holdings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg>',
   stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>',
@@ -1140,9 +1153,13 @@ function holdingsList(compact){
     const hs = D.holdings.filter(h => h.accountId === a.id);
     if(!hs.length && compact) continue;
     const m = metrics(E.account(a.id));
-    html += `<div class="list"><button class="acc-head" data-open-account="${a.id}"><span class="name">${esc(a.name)}</span>
-      <span style="text-align:right">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}${m && m.tracked ? `<br><span class="${signCls(m.gain - m.bankGain)}" style="font-size:12px">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</span>` : ''}</span></button>
-      ${hs.map(holdingRow).join('') || `<div class="item muted">${t('no_entries')}</div>`}</div>`;
+    // Tapping the header folds the account open or closed (remembered); the arrow opens its page.
+    const open = !(UI.closedAcc || {})[a.id];
+    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain - m.bankGain)}">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</div>` : '';
+    html += `<div class="list ${open ? '' : 'closed'}"><div class="acc-head ${open ? 'open' : ''}" data-toggle-account="${a.id}" role="button" aria-expanded="${open}">
+      <div class="top"><span class="lft"><span class="chev">${ICONS.chev}</span><span class="name">${esc(a.name)}</span><span class="cnt">${hs.length}</span></span>
+      <span class="rgt">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}<button class="iconbtn" data-open-account="${a.id}" aria-label="${esc(a.name)}">${ICONS.fwd}</button></span></div>${diff}</div>
+      ${open ? hs.map(holdingRow).join('') || `<div class="item muted">${t('no_entries')}</div>` : ''}</div>`;
   }
   return html;
 }
@@ -1317,6 +1334,7 @@ function renderPage(){
     title = a.name; A = E.account(a.id);
     const m = metrics(A);
     body += heroCard(m, t('account')) + tilesHtml(m) + (m ? chartCard(A, 'chart-page') : '');
+    body += `<button class="btn ghost" style="margin-bottom:12px" data-act="edit-account">${t('rename')}</button>`;
     const hs = D.holdings.filter(h => h.accountId === a.id);
     body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
   }
@@ -1742,7 +1760,7 @@ function parseTransactions(text){
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
-  const accOpts = D.accounts.length ? accountOptions(defAcc) : `<option value="">${esc(t('default_account'))}</option>`;
+  const accOpts = accountOptions(defAcc) + `<option value="+">${esc(t('new_account'))}</option>`;
   openSheet(`<h3>${t('import_tx')}</h3>
     <div class="hint">${t('import_tx_hint')}</div>
     <textarea class="inp" id="x-text" rows="7" style="font-size:13px;font-family:ui-monospace,monospace;resize:vertical" placeholder="2026-09-14\tKjøp\tKLP AksjeUSA Indeks N\t0,0388\t1 888,66\t73,28"></textarea>
@@ -1752,6 +1770,7 @@ function importTxForm(){
       <label class="f"><span>${t('account')}</span><select class="inp" id="x-acc">${accOpts}</select></label>
       <label class="f"><span>${t('currency')}</span><select class="inp" id="x-cur">${CURRENCIES.map(c => `<option ${c === D.settings.baseCurrency ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
     </div>
+    <label class="f hidden" id="x-accname-w"><span>${t('new_account_name')}</span><input class="inp" id="x-accname" placeholder="Fond 4, Kron, ASK…"></label>
     <div id="x-prev"></div>`,
   sh => {
     let parsed = null;
@@ -1780,7 +1799,12 @@ function importTxForm(){
         ${bad ? `<div class="hint">${esc(t('import_bad_rows', {n:bad}))}</div>` : ''}
         <button class="btn" id="x-go" style="margin-top:8px">${esc(t('import_go', {n:rows.length}))}</button>`;
       prev.querySelector('#x-go').onclick = () => {
-        let acc = sh.querySelector('#x-acc').value || ensureAccount();
+        let acc = sh.querySelector('#x-acc').value;
+        if(acc === '+'){
+          const nm = sh.querySelector('#x-accname').value.trim();
+          if(!nm){ toast(t('required')); return; }
+          const na = {id:uid(), name:nm}; D.accounts.push(na); acc = na.id;
+        }
         const cur = sh.querySelector('#x-cur').value;
         let added = 0, dup = 0;
         for(const [k, g] of Object.entries(groups)){
@@ -1802,6 +1826,9 @@ function importTxForm(){
         render(); if(page) renderPage(); refreshMarket();
       };
     };
+    const accSel = sh.querySelector('#x-acc');
+    const syncAcc = () => sh.querySelector('#x-accname-w').classList.toggle('hidden', accSel.value !== '+');
+    accSel.onchange = syncAcc; syncAcc();
     const read = () => { parsed = parseTransactions(sh.querySelector('#x-text').value); show(); };
     sh.querySelector('#x-read').onclick = read;
     sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
@@ -1855,7 +1882,7 @@ function toast(msg){
 }
 
 document.addEventListener('click', e => {
-  const b = e.target.closest('button, [data-tab]');
+  const b = e.target.closest('button, [data-tab], [data-toggle-account]');
   if(!b) return;
   const d = b.dataset;
   if(d.tab){ tab = d.tab; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); return; }
@@ -1863,6 +1890,7 @@ document.addEventListener('click', e => {
   if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:1, inf:0, inv:1}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
   if(d.v && b.parentElement.dataset.act === 'mode'){ UI.chartMode = d.v; saveUI(); render(); return; }
   if(d.openHolding){ openPage({type:'holding', id:d.openHolding}); return; }
+  if(d.toggleAccount){ UI.closedAcc = Object.assign({}, UI.closedAcc); if(UI.closedAcc[d.toggleAccount]) delete UI.closedAcc[d.toggleAccount]; else UI.closedAcc[d.toggleAccount] = 1; saveUI(); render(); return; }
   if(d.openAccount){ openPage({type:'account', id:d.openAccount}); return; }
   if(d.editEntry){ const en = D.entries.find(x => x.id === d.editEntry); const h = en && D.holdings.find(x => x.id === en.holdingId); if(h) entryForm(h, en); return; }
   if(d.editTrade){ const tr = D.trades.find(x => x.id === d.editTrade); const h = tr && D.holdings.find(x => x.id === tr.holdingId); if(h) tradeForm(h, tr); return; }
@@ -1874,6 +1902,7 @@ document.addEventListener('click', e => {
     case 'add-holding': holdingForm(); break;
     case 'add-account': accountForm(); break;
     case 'edit-holding': if(h) holdingForm(h); break;
+    case 'edit-account': if(page && page.type === 'account') accountForm(D.accounts.find(x => x.id === page.id)); break;
     case 'new-entry': if(h) entryForm(h); break;
     case 'new-trade': if(h) tradeForm(h); break;
     case 'stats': tab = 'stats'; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); break;
