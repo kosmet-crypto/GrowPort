@@ -312,7 +312,17 @@ const L = {
   import_go:['Import {n} transactions','Увези {n} трансакција','Importer {n} transaksjoner'],
   import_done:['Imported {n} transactions','Увезено {n} трансакција','Importerte {n} transaksjoner'],
   import_dup:['{n} already there','{n} већ постоји','{n} fantes fra før'],
-  fund_tx_hint:['The value follows units × the last known price (from purchases and value entries). Add a new entry with today\'s value to keep it current.','Вредност је број удела × последња позната цена (из куповина и уноса вредности). Додај нови унос са данашњом вредношћу да би била ажурна.','Verdien er antall andeler × siste kjente kurs (fra kjøp og registreringer). Legg inn dagens verdi for å holde den oppdatert.'],
+  fund_tx_hint:['Without a daily price the value is units × the last known price (from purchases and value entries); add today\'s value now and then to keep it current.','Без дневне цене вредност је број удела × последња позната цена (из куповина и уноса вредности); повремено унеси данашњу вредност да би била ажурна.','Uten daglig kurs er verdien antall andeler × siste kjente kurs (fra kjøp og registreringer); legg inn dagens verdi av og til for å holde den oppdatert.'],
+  daily_price:['Daily price','Дневна цена','Daglig kurs'],
+  find_price:['Find daily price automatically','Пронађи дневну цену аутоматски','Finn daglig kurs automatisk'],
+  searching:['Searching…','Тражим…','Søker…'],
+  no_price_found:['No daily price found for this fund (check your connection). The value follows your purchases and value entries.','Није пронађена дневна цена за овај фонд (провери везу). Вредност прати куповине и уносе вредности.','Fant ingen daglig kurs for fondet (sjekk nettet). Verdien følger kjøp og registreringer.'],
+  match_ok:['matches your purchase prices (±{p})','поклапа се са ценама твојих куповина (±{p})','stemmer med kursene i kjøpene dine (±{p})'],
+  match_bad:['does not match your purchase prices ({p} off)','не поклапа се са ценама твојих куповина (разлика {p})','stemmer ikke med kursene i kjøpene dine ({p} avvik)'],
+  match_unknown:['could not be checked against your purchases','није могло да се провери према куповинама','kunne ikke sjekkes mot kjøpene'],
+  link_anyway:['This price does not match your purchases. Use it anyway?','Ова цена се не поклапа са твојим куповинама. Ипак је користити?','Denne kursen stemmer ikke med kjøpene. Bruke den likevel?'],
+  unlink:['Stop using this price','Не користи ову цену','Slutt å bruke denne kursen'],
+  prices_found:['Daily prices found for {n} of {m} funds','Дневне цене пронађене за {n} од {m} фондова','Daglig kurs funnet for {n} av {m} fond'],
   rename:['Rename','Промени назив','Endre navn'],
   new_account:['+ New account','+ Нови рачун','+ Ny konto'],
   new_account_name:['Name of the new account','Назив новог рачуна','Navn på den nye kontoen'],
@@ -434,7 +444,7 @@ async function getJSON(urls, opts){
 // Exchange rates: ECB reference rates (via Frankfurter), per EUR, one request per year.
 async function updateFx(fromYear){
   const need = new Set(['USD', D.settings.baseCurrency]);
-  D.holdings.forEach(h => { if(h.currency) need.add(h.currency); });
+  D.holdings.forEach(h => { if(h.currency) need.add(h.currency); if(h.symbol && C.tick[h.symbol]) need.add(C.tick[h.symbol].currency); });
   need.delete('EUR');
   const syms = [...need].sort().join(',');
   if(!syms) return;
@@ -512,7 +522,7 @@ async function searchTicker(q){
 }
 async function updateTickers(){
   let failed = false;
-  for(const h of D.holdings.filter(h => h.type === 'ticker' && h.symbol)){
+  for(const h of D.holdings.filter(h => (h.type === 'ticker' || h.type === 'fund') && h.symbol)){
     const first = firstDateOf(h);
     const c = C.tick[h.symbol];
     if(c && Date.now() - c.at < 15 * 60e3 && (!first || c.from <= dnum(first))) continue;
@@ -727,11 +737,14 @@ function buildEngine(){
       const gross = isBtc ? e.amount : e.qty * e.price + (e.side === 'sell' ? -e.fee : e.fee);
       res.flows.push({n:e.n, amt:(e.side === 'sell' ? -gross : gross) * m});
     }
-    const tick = !isBtc && !isFund && C.tick[h.symbol] ? makeSeries(C.tick[h.symbol].prices) : null;
+    const tick = !isBtc && h.symbol && C.tick[h.symbol] ? makeSeries(C.tick[h.symbol].prices) : null;
+    // A fund linked to a daily price (Yahoo) uses it; days without one fall back to known prices.
+    const tickCur = isFund && tick ? C.tick[h.symbol].currency : cur;
     const fp = isFund ? fundPricer(h, ts) : null;
     if(fp){
       res.dots = fp.points.map(x => x.n - N0);
       res.lastEntry = fp.points.length ? fp.points[fp.points.length - 1].n : ts[ts.length - 1].n;
+      if(tick && tick.n) res.lastEntry = Math.max(res.lastEntry, tick.last);
     }
     let qty = 0, k = 0, lastPrice = null;
     for(let i = 0; i < len; i++){
@@ -745,7 +758,11 @@ function buildEngine(){
       if(n < ts[0].n) continue;
       let p;
       if(isBtc) p = btcPrice(n);
-      else if(fp){ const q = fp.price(n); const m = fx(cur, n); p = q != null && m != null ? q * m : null; }
+      else if(fp){
+        const q = tick && tick.at(n), m = q != null ? fx(tickCur, n) : null;
+        if(q != null && m != null) p = q * m;
+        else { const q2 = fp.price(n), m2 = fx(cur, n); p = q2 != null && m2 != null ? q2 * m2 : null; }
+      }
       else { const q = tick && tick.at(n); const m = fx(cur, n); p = q != null && m != null ? q * m : null; }
       if(p == null && lastPrice){ const m = isBtc ? fx(cur, lastPrice.n) : fx(cur, n); if(m != null){ p = lastPrice.unit * m; res.warn = res.warn || 'price'; } }
       res.act[i] = p == null ? null : qty * p;
@@ -1323,7 +1340,7 @@ function renderPage(){
       body += `<div class="btnrow" style="margin-bottom:8px"><button class="btn" data-act="new-entry">${t('new_entry')}</button>
         <button class="btn ghost" data-act="new-trade">${t('new_trade')}</button></div>
         <button class="btn ghost" style="margin-bottom:6px" data-act="edit-holding">${t('edit')}</button>`;
-      if(hasTx) body += `<div class="sectnote">${t('fund_tx_hint')}</div>` + tradesList(h);
+      if(hasTx) body += priceCard(h) + tradesList(h);
       body += entriesList(h);
     } else {
       body += `<div class="btnrow" style="margin-bottom:6px"><button class="btn" data-act="new-trade">${t('new_trade')}</button>
@@ -1345,6 +1362,17 @@ function renderPage(){
   el.innerHTML = `<div class="top"><button class="iconbtn" data-act="back" aria-label="Back">${ICONS.back}</button><div class="title">${esc(title)}</div></div><div class="wrap" style="padding-top:0">${body}</div>`;
   el.scrollTop = scroll;
   afterRender(el);
+}
+// Daily price for a fund with purchases: linked Yahoo symbol, or a button to find one.
+function priceCard(h){
+  if(h.symbol){
+    const c = C.tick[h.symbol], last = c && Object.keys(c.prices).sort().pop();
+    return `<div class="card"><div class="kv"><span class="k">${t('daily_price')}</span><span class="v">${esc(h.symbol)}</span></div>
+      <div class="hint">${last ? esc(fmtDate(last)) + ': ' + esc(fmtMoney(c.prices[last], {cur:c.currency, digits:2})) + ' · ' : ''}Yahoo Finance</div>
+      <button class="btn ghost small" data-act="unlink-price">${t('unlink')}</button></div>`;
+  }
+  return `<div class="card"><div style="font-weight:600;margin-bottom:4px">${t('daily_price')}</div><div class="hint">${t('fund_tx_hint')}</div>
+    <button class="btn small" data-act="find-price">${t('find_price')}</button><div id="price-res" style="margin-top:8px"></div></div>`;
 }
 function entriesList(h){
   const es = D.entries.filter(e => e.holdingId === h.id).sort((a, b) => a.date < b.date ? 1 : -1);
@@ -1802,6 +1830,79 @@ async function pdfToText(buf){
   return out.join('\n');
 }
 
+/* ---------- daily fund prices ---------- */
+// Looks the fund up on Yahoo Finance by name and checks each candidate against the user's own
+// purchase prices (median difference, allowing a day or two between order and price date), so a
+// wrong fund or share class is never linked by accident.
+async function findFundPrices(h){
+  const ts = D.trades.filter(e => e.holdingId === h.id && e.price > 0);
+  if(!ts.length) return [];
+  const qs = [h.name, h.name.replace(/\s+[A-Z]$/, ''), h.name.replace(/\s+(indeks|index)\b.*$/i, '')];
+  const seen = new Set(), cands = [];
+  for(const q of [...new Set(qs)]){
+    try{ for(const r of await searchTicker(q)) if(!seen.has(r.symbol) && cands.length < 8){ seen.add(r.symbol); cands.push(r); } }catch(e){}
+    if(cands.length >= 3) break;
+  }
+  const from = Math.min(...ts.map(e => dnum(e.date)));
+  const E = getEngine(), cur = h.currency || D.settings.baseCurrency;
+  const out = [];
+  for(const c of cands){
+    try{
+      const r = await fetchTicker(c.symbol, from);
+      const S = makeSeries(r.prices);
+      const errs = [];
+      for(const e of ts){
+        const n = dnum(e.date), a = E.fx(r.currency, n), b = E.fx(cur, n);
+        if(a == null || b == null) continue;
+        let best = null;
+        for(let d = -1; d <= 2; d++){ const q = S.at(n + d); if(q != null){ const er = Math.abs(q * a / b / e.price - 1); if(best == null || er < best) best = er; } }
+        if(best != null) errs.push(best);
+      }
+      errs.sort((x, y) => x - y);
+      const last = Object.keys(r.prices).sort().pop();
+      out.push({symbol:c.symbol, name:c.name, currency:r.currency, prices:r.prices, from, last, err:errs.length ? errs[errs.length >> 1] : null});
+    }catch(e){}
+  }
+  return out.sort((a, b) => (a.err ?? 9) - (b.err ?? 9));
+}
+const PRICE_MATCH = 0.015;
+function linkPrice(h, c){
+  h.symbol = c.symbol;
+  C.tick[c.symbol] = {currency:c.currency, prices:c.prices, at:Date.now(), from:c.from};
+  saveCache(); saveData();
+}
+// After an import: link every fund with purchases but no daily price to a candidate that matches.
+async function autoLinkPrices(ids){
+  const hs = D.holdings.filter(h => h.type === 'fund' && !h.symbol && ids.includes(h.id));
+  if(!hs.length) return;
+  await refreshMarket();   // exchange rates for the purchase dates
+  let found = 0;
+  for(const h of hs){
+    const best = (await findFundPrices(h))[0];
+    if(best && best.err != null && best.err < PRICE_MATCH){ linkPrice(h, best); found++; }
+  }
+  toast(t('prices_found', {n:found, m:hs.length}));
+  render(); if(page) renderPage();
+  if(found) refreshMarket();
+}
+async function findPriceUI(h){
+  const box = page && $('overlay').querySelector('.page #price-res');
+  if(!box) return;
+  box.innerHTML = `<div class="hint">${t('searching')}</div>`;
+  const cs = await findFundPrices(h);
+  if(!cs.length){ box.innerHTML = `<div class="hint">${t('no_price_found')}</div>`; return; }
+  box.innerHTML = `<div class="results">${cs.map((c, i) => {
+    const ok = c.err != null && c.err < PRICE_MATCH;
+    const m = c.err == null ? t('match_unknown') : ok ? t('match_ok', {p:fmtPct(c.err, false)}) : t('match_bad', {p:fmtPct(c.err, false)});
+    return `<button data-i="${i}"><b>${esc(c.symbol)}</b> · ${esc(c.name)}<br><span class="${ok ? 'good' : 'muted'}">${ok ? '✓ ' : ''}${esc(m)}</span></button>`;
+  }).join('')}</div>`;
+  box.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const c = cs[+b.dataset.i];
+    if(!(c.err != null && c.err < PRICE_MATCH) && !confirm(t('link_anyway'))) return;
+    linkPrice(h, c); render(); renderPage(); refreshMarket();
+  });
+}
+
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
@@ -1851,13 +1952,14 @@ function importTxForm(){
           const na = {id:uid(), name:nm}; D.accounts.push(na); acc = na.id;
         }
         const cur = sh.querySelector('#x-cur').value;
-        let added = 0, dup = 0;
+        let added = 0, dup = 0; const touched = [];
         for(const [k, g] of Object.entries(groups)){
           let hid = prev.querySelector(`select[data-grp="${CSS.escape(k)}"]`).value;
           if(!hid){
             const nh = {id:uid(), type:'fund', name:g.name, accountId:acc, currency:cur};
             D.holdings.push(nh); hid = nh.id;
           }
+          touched.push(hid);
           for(const r of g.rows){
             if(D.trades.some(x => x.holdingId === hid && x.date === r.date && x.side === r.side && Math.abs(x.qty - r.qty) < 1e-9)){ dup++; continue; }
             // Keep the platform's total exact: the rounding difference goes into the fee.
@@ -1868,7 +1970,8 @@ function importTxForm(){
         }
         saveData(); closeSheet();
         toast(t('import_done', {n:added}) + (dup ? ' · ' + t('import_dup', {n:dup}) : ''));
-        render(); if(page) renderPage(); refreshMarket();
+        render(); if(page) renderPage();
+        refreshMarket().then(() => autoLinkPrices(touched));
       };
     };
     const accSel = sh.querySelector('#x-acc');
@@ -1958,6 +2061,8 @@ document.addEventListener('click', e => {
     case 'edit-account': if(page && page.type === 'account') accountForm(D.accounts.find(x => x.id === page.id)); break;
     case 'new-entry': if(h) entryForm(h); break;
     case 'new-trade': if(h) tradeForm(h); break;
+    case 'find-price': if(h) findPriceUI(h); break;
+    case 'unlink-price': if(h && confirm(t('confirm_del'))){ delete h.symbol; saveData(); render(); renderPage(); } break;
     case 'stats': tab = 'stats'; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); break;
     case 'back': history.back(); break;
     case 'add-rate': rateForm(); break;
