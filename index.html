@@ -290,6 +290,7 @@ const L = {
   partial:['Some prices could not be updated','Неке цене нису ажуриране','Noen kurser ble ikke oppdatert'],
   about:['About','О апликацији','Om'],
   version:['Version','Верзија','Versjon'],
+  author:['Made by','Аутор','Laget av'],
   check_updates:['Check for updates','Провери ажурирања','Se etter oppdateringer'],
   welcome_title:['Welcome to GrowPort','Добродошао у GrowPort','Velkommen til GrowPort'],
   welcome_text:['Track your funds and see how they compare with a savings account, Bitcoin and inflation.','Прати своје фондове и види како стоје у односу на штедњу, биткоин и инфлацију.','Følg fondene dine og se hvordan de står mot sparekonto, bitcoin og inflasjon.'],
@@ -329,6 +330,7 @@ const L = {
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
+const AUTHOR = 'Ivan St. Epicurus001 - Srbija/Norge';
 const LOCALES = {en:'en-GB', sr:'sr-Cyrl-RS', no:'nb-NO'};
 const CURRENCIES = ['NOK','EUR','USD','SEK','DKK','GBP','CHF'];
 
@@ -1312,7 +1314,8 @@ function viewSettings(){
   <div class="card"><div class="kv"><span class="k status">${esc(statusText())}</span><span class="v"><button class="btn small ghost" data-act="refresh">${t('refresh')}</button></span></div>
   <div class="hint" style="margin:6px 0 0">ECB (Frankfurter) · Binance / Coinbase · Yahoo Finance · SSB</div></div>
   <h2>${t('about')}</h2>
-  <div class="card"><div class="kv"><span class="k">${t('version')}</span><span class="v">${esc(ver)}</span></div>
+  <div class="card"><div class="kv"><span class="k">${t('author')}</span><span class="v">${esc(AUTHOR)}</span></div>
+  <div class="kv"><span class="k">${t('version')}</span><span class="v">${esc(ver)}</span></div>
   ${canUpdate ? `<button class="btn ghost" style="margin-top:8px" data-act="check-update">${t('check_updates')}</button>` : ''}</div>`;
 }
 
