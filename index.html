@@ -71,6 +71,10 @@ input,select{font:inherit;color:var(--ink)}
 .whatif .verdict{font-size:13.5px;font-weight:600;padding:9px 12px;border-radius:12px;display:flex;gap:8px;align-items:center}
 .whatif .verdict.good{background:var(--good-soft)} .whatif .verdict.bad{background:var(--bad-soft)}
 .whatif .verdict.muted{background:var(--card2)}
+.whatif .infl{margin-top:14px;padding-top:6px;border-top:1px solid var(--line)}
+.whatif .infl .k{display:flex;align-items:center;gap:8px}
+.whatif .infl .it{font-weight:650;font-size:14px;display:flex;align-items:center;gap:8px;margin:8px 0 2px}
+.whatif .infl small{font-weight:500;color:var(--muted);font-size:12px}
 .cmp .r{padding:11px 0;border-top:1px solid var(--line)}
 .cmp .r:first-child{border-top:0}
 .cmp .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -348,13 +352,14 @@ const L = {
   wi_you:['Your investments','Твоја улагања','Dine investeringer'],
   wi_bank:['In the bank','У банци','I banken'],
   wi_btc:['In Bitcoin','У биткоину','I bitcoin'],
-  wi_infl:['Only keeping up with inflation','Само да прати инфлацију','Bare fulgt inflasjonen'],
+  infl_title:['If the money had not been invested','Да новац није уложен','Hvis pengene ikke var investert'],
+  infl_cash:['Worth today (after inflation)','Данас би вредео (после инфлације)','Verdt i dag (etter inflasjon)'],
+  infl_ate:['Inflation would have eaten','Инфлација би појела','Inflasjonen ville spist'],
+  infl_explain:['Prices have risen since your deposits, so the same money kept as cash would buy less today.','Цене су порасле од твојих уплата, па би исти новац држан у готовини данас куповао мање.','Prisene har steget siden innskuddene, så de samme pengene holdt som kontanter ville kjøpt mindre i dag.'],
   v_bank_better:['Better than the bank by {v}','Боље од банке за {v}','Bedre enn banken med {v}'],
   v_bank_worse:['The bank would have given {v} more','Банка би донела {v} више','Banken ville gitt {v} mer'],
   v_btc_better:['Better than Bitcoin by {v}','Боље од биткоина за {v}','Bedre enn bitcoin med {v}'],
   v_btc_worse:['Bitcoin would have given {v} more','Биткоин би донео {v} више','Bitcoin ville gitt {v} mer'],
-  v_infl_better:['Above inflation by {v}','Изнад инфлације за {v}','Over inflasjonen med {v}'],
-  v_infl_worse:['Below inflation by {v}','Испод инфлације за {v}','Under inflasjonen med {v}'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -868,7 +873,7 @@ function buildEngine(){
   }
 
   return {
-    N0, len, T, results, fx, btcPrice,
+    N0, len, T, results, fx, btcPrice, level,
     total(){ return aggregate('total', () => true); },
     account(id){ return aggregate('a:' + id, r => r.h.accountId === id); },
     holding(id){ return aggregate('h:' + id, r => r.h.id === id); },
@@ -891,6 +896,9 @@ function metrics(A){
     out.bankPct = inv > 0 ? out.bankGain / inv : null;
     out.btcPct = out.btcGain != null && inv > 0 ? out.btcGain / inv : null;
     out.inflPct = inv > 0 ? out.inflGain / inv : null;
+    // The same deposits kept as cash, in today's purchasing power: each one shrinks by the price rise since its day.
+    const LT = E.level(E.T);
+    out.cashReal = A.flows.reduce((sum, f) => sum + f.amt * E.level(f.n) / LT, 0);
   }
   return out;
 }
@@ -1152,7 +1160,6 @@ function compareCard(m, isBtcOnly){
   if(!m || !m.tracked) return '';
   const rows = [{k:'you', g:m.gain, p:m.gainPct, c:'var(--s1)'}, {k:'bank', g:m.bankGain, p:m.bankPct, c:'var(--s3)'}];
   if(!isBtcOnly) rows.push({k:'btc', g:m.btcGain, p:m.btcPct, c:'var(--s2)'});
-  rows.push({k:'infl', g:m.inflGain, p:m.inflPct, c:'var(--s4)'});
   const max = Math.max(1, ...rows.filter(r => r.g != null).map(r => Math.abs(r.g)));
   const bar = r => r.g == null ? '' : `<div class="wbar"><span style="width:${Math.max(2, Math.abs(r.g) / max * 100).toFixed(1)}%;background:${r.g < 0 ? 'var(--bad)' : r.c}"></span></div>`;
   const verdict = (alt, better, worse) => {
@@ -1166,8 +1173,14 @@ function compareCard(m, isBtcOnly){
     <div class="verdicts">
       ${verdict(m.bankGain, 'v_bank_better', 'v_bank_worse')}
       ${isBtcOnly ? '' : m.btcGain == null ? `<div class="verdict muted">BTC: ${t('missing_price')}</div>` : verdict(m.btcGain, 'v_btc_better', 'v_btc_worse')}
-      ${verdict(m.inflGain, 'v_infl_better', 'v_infl_worse')}
-    </div></div>`;
+    </div>
+    ${m.cashReal != null ? `<div class="infl">
+      <div class="it"><span class="dot" style="background:var(--s4)"></span>${t('infl_title')}</div>
+      <div class="kv"><span class="k">${t('invested')}</span><span class="v">${esc(fmtMoney(m.inv))}</span></div>
+      <div class="kv"><span class="k">${t('infl_cash')}</span><span class="v">${esc(fmtMoney(m.cashReal))}</span></div>
+      <div class="kv"><span class="k">${t('infl_ate')}</span><span class="v ${m.inv - m.cashReal > 0.5 ? 'bad' : ''}">${esc(fmtMoney(-(m.inv - m.cashReal)))}${m.inv > 0 ? ` <small>${esc(fmtPct(-(m.inv - m.cashReal) / m.inv))}</small>` : ''}</span></div>
+      <div class="hint" style="margin:4px 0 0">${t('infl_explain')}</div>
+    </div>` : ''}</div>`;
 }
 
 function viewHome(){
