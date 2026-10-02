@@ -47,7 +47,8 @@ input,select{font:inherit;color:var(--ink)}
 .brand svg{width:26px;height:26px}
 .iconbtn{border:0;background:transparent;padding:8px;border-radius:10px;color:var(--ink2);display:inline-flex}
 .iconbtn:active{background:var(--line)}
-.status{font-size:12px;color:var(--muted)}
+.status{font-size:12px;color:var(--muted);text-align:right;line-height:1.25;max-width:150px}
+.brand{flex:none}
 .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--line)}
 .hero{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border:0}
 .hero .lbl{opacity:.8;font-size:13px}
@@ -56,6 +57,15 @@ input,select{font:inherit;color:var(--ink)}
 .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.16)}
 .hero .sub{font-size:12px;opacity:.75;margin-top:6px}
 .cmp{padding:4px 16px}
+.whatif .wt{font-weight:700;margin-bottom:8px}
+.whatif .wr{margin:9px 0}
+.whatif .wl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--ink2)}
+.whatif .wl b{color:var(--ink);white-space:nowrap}
+.whatif .wl small{font-weight:400;color:var(--ink2);font-size:12px}
+.whatif .wbar{height:7px;border-radius:4px;background:var(--line);margin-top:4px;overflow:hidden}
+.whatif .wbar span{display:block;height:100%;border-radius:4px}
+.whatif .verdicts{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.whatif .verdict{font-size:14px;font-weight:600;margin:4px 0}
 .cmp .r{padding:11px 0;border-top:1px solid var(--line)}
 .cmp .r:first-child{border-top:0}
 .cmp .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -196,7 +206,6 @@ const L = {
   diff_infl:['vs inflation','наспрам инфлације','mot inflasjon'],
   p6m:['6M','6М','6M'], p1y:['1Y','1Г','1Å'], p3y:['3Y','3Г','3Å'], pall:['All','Све','Alt'],
   chart_empty:['The chart appears after your first entry','График се појављује после првог уноса','Grafen vises etter første registrering'],
-  detailed_stats:['Detailed statistics','Детаљна статистика','Detaljert statistikk'],
   add_holding:['Add holding','Додај ставку','Legg til'],
   add_account:['Add account','Додај рачун','Legg til konto'],
   new_entry:['New entry','Нови унос','Ny registrering'],
@@ -327,6 +336,17 @@ const L = {
   rename:['Rename','Промени назив','Endre navn'],
   new_account:['+ New account','+ Нови рачун','+ Ny konto'],
   new_account_name:['Name of the new account','Назив новог рачуна','Navn på den nye kontoen'],
+  what_if:['What if the same money had been…','Шта би било да је исти новац био…','Hva om de samme pengene hadde vært…'],
+  wi_you:['Your investments','Твоја улагања','Dine investeringer'],
+  wi_bank:['In the bank','У банци','I banken'],
+  wi_btc:['In Bitcoin','У биткоину','I bitcoin'],
+  wi_infl:['Only keeping up with inflation','Само да прати инфлацију','Bare fulgt inflasjonen'],
+  v_bank_better:['Better than the bank by {v}','Боље од банке за {v}','Bedre enn banken med {v}'],
+  v_bank_worse:['The bank would have given {v} more','Банка би донела {v} више','Banken ville gitt {v} mer'],
+  v_btc_better:['Better than Bitcoin by {v}','Боље од биткоина за {v}','Bedre enn bitcoin med {v}'],
+  v_btc_worse:['Bitcoin would have given {v} more','Биткоин би донео {v} више','Bitcoin ville gitt {v} mer'],
+  v_infl_better:['Above inflation by {v}','Изнад инфлације за {v}','Over inflasjonen med {v}'],
+  v_infl_worse:['Below inflation by {v}','Испод инфлације за {v}','Under inflasjonen med {v}'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -917,22 +937,23 @@ const DIFF_LABEL = {sav:'diff_bank', btc:'diff_btc', inf:'diff_infl'};
 const PERIODS = [['p6m', 183], ['p1y', 365], ['p3y', 1096], ['pall', 0]];
 
 function chartCard(A, id){
-  const mode = UI.chartMode || 'value';
+  const withMode = id === 'chart-stats';
+  const mode = withMode ? UI.chartMode || 'value' : 'value';
   const period = UI.period || 'pall';
   const hasCompare = A.n0 != null;
-  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  const vis = UI.series || {act:1, sav:1, btc:0, inf:0, inv:0};
   let keys = mode === 'value' ? ['act', 'sav', 'btc', 'inf', 'inv'] : ['sav', 'btc', 'inf'];
   if(!hasCompare) keys = mode === 'value' ? ['act'] : [];
   if(!A.btcOk) keys = keys.filter(k => k !== 'btc');
   const legendKeys = keys.filter(k => !(mode === 'value' && k === 'act'));
   return `<div class="card">
-    <div class="chart-head">
+    ${withMode ? `<div class="chart-head">
       <div class="seg" data-act="mode">
         <button class="${mode === 'value' ? 'on' : ''}" data-v="value">${t('mode_value')}</button>
         <button class="${mode === 'diff' ? 'on' : ''}" data-v="diff" ${hasCompare ? '' : 'disabled'}>${t('mode_diff')}</button>
       </div>
-    </div>
-    <div class="chart" id="${id}" data-keys="${keys.join(',')}"></div>
+    </div>` : ''}
+    <div class="chart" id="${id}" data-keys="${keys.join(',')}" data-mode="${mode}"></div>
     <div class="periods">${PERIODS.map(([k]) => `<button data-period="${k}" class="${period === k ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
     ${legendKeys.length ? `<div class="legend">${mode === 'value' ? `<span class="chip"><span class="sw" style="background:${SERIES.act.color}"></span>${t('portfolio')}</span>` : ''}
       ${legendKeys.map(k => `<button class="chip ${vis[k] ? '' : 'off'}" data-series="${k}"><span class="sw" style="background:${SERIES[k].color}"></span>${mode === 'diff' ? t(DIFF_LABEL[k]) : t(SERIES[k].key)}</button>`).join('')}</div>` : ''}
@@ -942,8 +963,8 @@ function chartCard(A, id){
 function drawChart(el, A){
   if(!el) return;
   const E = getEngine();
-  const mode = UI.chartMode || 'value';
-  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  const mode = el.dataset.mode || 'value';
+  const vis = UI.series || {act:1, sav:1, btc:0, inf:0, inv:0};
   const keys = el.dataset.keys ? el.dataset.keys.split(',').filter(Boolean) : [];
   const days = (PERIODS.find(p => p[0] === (UI.period || 'pall')) || PERIODS[3])[1];
   let from = A.firstIdx;
@@ -1103,31 +1124,41 @@ function topBar(){
     <button class="iconbtn" data-act="refresh" aria-label="${t('refresh')}">${ICONS.refresh}</button></div></div>`;
 }
 
+// Headline card: the gain is the big number; value and money put in are the line below.
 function heroCard(m, title){
   if(!m) return '';
-  return `<div class="card hero">
-    <div class="lbl">${esc(title)}</div>
+  if(!m.tracked) return `<div class="card hero">
+    <div class="lbl">${esc(title || t('total_value'))}</div>
     <div class="big">${esc(fmtMoney(m.value))}</div>
-    ${m.tracked ? `<div class="row"><span class="pill">${arrow(m.gain)}${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</span><span style="font-size:12.5px;opacity:.8">${t('gain_since')}</span></div>
-      ${m.preGain ? `<div class="sub">${esc(t('pre_gain', {v:fmtMoney(m.preGain, {sign:true})}))}</div>` : ''}`
-      : `<div class="sub">${t('no_compare')}</div>`}
+    <div class="sub">${t('no_compare')}</div></div>`;
+  return `<div class="card hero">
+    <div class="lbl">${esc(t('gain'))}${title ? ' · ' + esc(title) : ''}</div>
+    <div class="row"><span class="big">${esc(fmtMoney(m.gain, {sign:true}))}</span><span class="pill">${esc(fmtPct(m.gainPct))}</span></div>
+    <div class="sub">${esc(t('value'))} ${esc(fmtMoney(m.value))} · ${esc(t('invested'))} ${esc(fmtMoney(m.inv))}</div>
   </div>`;
 }
-function tilesHtml(m, isBtcOnly){
+// "What if…": the same money in the bank, in Bitcoin, or only keeping up with inflation, as bars,
+// followed by plain verdicts ("better than the bank by …").
+function compareCard(m, isBtcOnly){
   if(!m || !m.tracked) return '';
-  const row = (label, color, altGain, altPct, name) => {
-    if(altGain == null) return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('missing_price')}</div></div>`;
-    const d = m.gain - altGain;
-    const rt = ratioText(m.gain, altGain);
-    return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span>
-      <span class="v ${signCls(d)}">${arrow(d)}${esc(fmtMoney(d, {sign:true}))}</span></div>
-      <div class="s">${rt ? esc(rt) + ' · ' : ''}${esc(t('alt_gain', {n:name, v:fmtMoney(altGain, {sign:true})}))} (${esc(fmtPct(altPct))})</div></div>`;
+  const rows = [{k:'you', g:m.gain, p:m.gainPct, c:'var(--s1)'}, {k:'bank', g:m.bankGain, p:m.bankPct, c:'var(--s3)'}];
+  if(!isBtcOnly) rows.push({k:'btc', g:m.btcGain, p:m.btcPct, c:'var(--s2)'});
+  rows.push({k:'infl', g:m.inflGain, p:m.inflPct, c:'var(--s4)'});
+  const max = Math.max(1, ...rows.filter(r => r.g != null).map(r => Math.abs(r.g)));
+  const bar = r => r.g == null ? '' : `<div class="wbar"><span style="width:${Math.max(2, Math.abs(r.g) / max * 100).toFixed(1)}%;background:${r.g < 0 ? 'var(--bad)' : r.c}"></span></div>`;
+  const verdict = (alt, better, worse) => {
+    if(alt == null) return '';
+    const d = m.gain - alt;
+    return `<div class="verdict ${d >= 0 ? 'good' : 'bad'}">${d >= 0 ? '✓' : '✗'} ${esc(t(d >= 0 ? better : worse, {v:fmtMoney(Math.abs(d))}))}</div>`;
   };
-  return `<div class="card cmp">
-    ${row(t('vs_bank'), 'var(--s3)', m.bankGain, m.bankPct, t('bank'))}
-    ${isBtcOnly ? `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:var(--s2)"></span>${t('vs_btc')}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('btc_itself')}</div></div>` : row(t('vs_btc'), 'var(--s2)', m.btcGain, m.btcPct, 'BTC')}
-    ${row(t('vs_infl'), 'var(--s4)', m.inflGain, m.inflPct, t('inflation'))}
-  </div>`;
+  return `<div class="card whatif"><div class="wt">${t('what_if')}</div>
+    ${rows.map(r => `<div class="wr"><div class="wl"><span>${t('wi_' + r.k)}</span>
+      <b class="${r.g == null ? 'muted' : r.k === 'you' ? signCls(r.g) : ''}">${r.g == null ? t('none') : esc(fmtMoney(r.g, {sign:true}))}${r.p != null ? ` <small>${esc(fmtPct(r.p))}</small>` : ''}</b></div>${bar(r)}</div>`).join('')}
+    <div class="verdicts">
+      ${verdict(m.bankGain, 'v_bank_better', 'v_bank_worse')}
+      ${isBtcOnly ? '' : m.btcGain == null ? `<div class="verdict muted">BTC: ${t('missing_price')}</div>` : verdict(m.btcGain, 'v_btc_better', 'v_btc_worse')}
+      ${verdict(m.inflGain, 'v_infl_better', 'v_infl_worse')}
+    </div></div>`;
 }
 
 function viewHome(){
@@ -1138,10 +1169,9 @@ function viewHome(){
   }
   const E = getEngine(), A = E.total(), m = metrics(A);
   let html = topBar() + demoBanner();
-  html += heroCard(m, t('total_value')) + tilesHtml(m);
+  html += heroCard(m) + compareCard(m);
   html += chartCard(A, 'chart-home');
-  html += `<button class="btn ghost" data-act="stats">${t('detailed_stats')}</button>`;
-  html += `<h2>${t('nav_holdings')}</h2>` + holdingsList(true);
+  html += `<h2>${t('accounts')}</h2>` + accountsSummary();
   return html;
 }
 function demoBanner(){ return D.demo ? `<div class="banner"><span>${t('demo_on')}</span><button class="btn small ghost" data-act="demo-clear">${t('demo_clear')}</button></div>` : ''; }
@@ -1167,6 +1197,16 @@ function holdingRow(h){
     ${m && m.tracked ? `<div class="chg ${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : ''}</div>
   </button>`;
 }
+// One row per account (name, value, gain); tapping opens the account with its holdings.
+function accountsSummary(){
+  const E = getEngine();
+  return `<div class="list">${D.accounts.filter(a => D.holdings.some(h => h.accountId === a.id)).map(a => {
+    const m = metrics(E.account(a.id)), n = D.holdings.filter(h => h.accountId === a.id).length;
+    return `<button class="item" data-open-account="${a.id}"><div class="main"><div class="name">${esc(a.name)}</div><div class="meta">${n} · ${t('nav_holdings')}</div></div>
+      <div class="right"><div class="val">${m ? esc(fmtMoney(m.value)) : t('none')}</div>
+      ${m && m.tracked ? `<div class="chg ${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : ''}</div></button>`;
+  }).join('')}</div>`;
+}
 function holdingsList(compact){
   const E = getEngine();
   let html = '';
@@ -1176,7 +1216,7 @@ function holdingsList(compact){
     const m = metrics(E.account(a.id));
     // Tapping the header folds the account open or closed (remembered); the arrow opens its page.
     const open = !(UI.closedAcc || {})[a.id];
-    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain - m.bankGain)}">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</div>` : '';
+    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain)}">${esc(t('gain'))} ${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : '';
     html += `<div class="list ${open ? '' : 'closed'}"><div class="acc-head ${open ? 'open' : ''}" data-toggle-account="${a.id}" role="button" aria-expanded="${open}">
       <div class="top"><span class="lft"><span class="chev">${ICONS.chev}</span><span class="name">${esc(a.name)}</span><span class="cnt">${hs.length}</span></span>
       <span class="rgt">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}<button class="iconbtn" data-open-account="${a.id}" aria-label="${esc(a.name)}">${ICONS.fwd}</button></span></div>${diff}</div>
@@ -1212,7 +1252,7 @@ function viewStats(){
   let html = topBar();
   html += `<label class="f"><span>${t('scope')}</span><select class="inp" data-act="scope">${scopeOptions(scope)}</select></label>`;
   if(!m){ return html + `<div class="card empty-chart">${t('chart_empty')}</div>`; }
-  html += heroCard(m, t('total_value'));
+  html += heroCard(m);
   if(m.tracked){
     const i = E.len - 1;
     const xr = v => v === 'short' ? t('too_short') : v == null ? t('none') : fmtPct(v);
@@ -1232,6 +1272,7 @@ function viewStats(){
     <div class="kv"><span class="k">${t('real_gain')}</span><span class="v ${signCls(m.gain - m.inflGain)}">${esc(fmtMoney(m.gain - m.inflGain, {sign:true}))}</span></div>
     <div class="kv"><span class="k">${t('maxdd')}</span><span class="v">${esc(fmtPct(-maxDrawdown(A), false))}</span></div>
     <div class="kv"><span class="k">${t('started')}</span><span class="v">${esc(fmtDate(dstr(A.n0)))}</span></div>
+    ${m.preGain ? `<div class="kv"><span class="k">${esc(t('pre_gain', {v:''}).replace(/[:\s]+$/, ''))}</span><span class="v">${esc(fmtMoney(m.preGain, {sign:true}))}</span></div>` : ''}
     </div>
     <div class="sectnote">${t('compare_note')}</div>`;
   }
@@ -1336,7 +1377,7 @@ function renderPage(){
     const m = metrics(A);
     body += heroCard(m, t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '') + (h.currency && h.currency !== D.settings.baseCurrency ? ' · ' + h.currency : ''));
     if(!m) body += `<div class="card empty-chart">${t('chart_empty')}</div>`;
-    body += tilesHtml(m, h.type === 'btc');
+    body += compareCard(m, h.type === 'btc');
     if(m) body += chartCard(A, 'chart-page');
     if(h.type === 'fund'){
       const hasTx = D.trades.some(e => e.holdingId === h.id);
@@ -1355,7 +1396,7 @@ function renderPage(){
     if(!a){ page = null; if(el) el.remove(); return; }
     title = a.name; A = E.account(a.id);
     const m = metrics(A);
-    body += heroCard(m, t('account')) + tilesHtml(m) + (m ? chartCard(A, 'chart-page') : '');
+    body += heroCard(m) + compareCard(m) + (m ? chartCard(A, 'chart-page') : '');
     body += `<button class="btn ghost" style="margin-bottom:12px" data-act="edit-account">${t('rename')}</button>`;
     const hs = D.holdings.filter(h => h.accountId === a.id);
     body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
@@ -2046,7 +2087,7 @@ document.addEventListener('click', e => {
   const d = b.dataset;
   if(d.tab){ tab = d.tab; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); return; }
   if(d.period){ UI.period = d.period; saveUI(); render(); return; }
-  if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:1, inf:0, inv:1}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
+  if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:0, inf:0, inv:0}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
   if(d.v && b.parentElement.dataset.act === 'mode'){ UI.chartMode = d.v; saveUI(); render(); return; }
   if(d.openHolding){ openPage({type:'holding', id:d.openHolding}); return; }
   if(d.toggleAccount){ UI.closedAcc = Object.assign({}, UI.closedAcc); if(UI.closedAcc[d.toggleAccount]) delete UI.closedAcc[d.toggleAccount]; else UI.closedAcc[d.toggleAccount] = 1; saveUI(); render(); return; }
