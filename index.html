@@ -11,51 +11,66 @@
 <style>
 :root{
   color-scheme: light;
-  --bg:#f3f5f9; --card:#ffffff; --card2:#f7f9fc; --ink:#0e1525; --ink2:#4a5468; --muted:#7c869a;
-  --line:#e3e7ef; --grid:#eceff5; --axis:#c9cfdb; --accent:#2a62d6; --accent-ink:#ffffff;
-  --good:#0a7d32; --bad:#c62f3a; --warn:#a86a00;
-  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#4a3aa7; --s0:#8a93a6;
-  --shadow:0 1px 2px rgba(14,21,37,.06),0 4px 16px rgba(14,21,37,.05);
-  --hero1:#16306e; --hero2:#2a62d6;
+  --bg:#f4f5f7; --card:#ffffff; --card2:#f4f6f9; --ink:#0f172a; --ink2:#475569; --muted:#8a94a6;
+  --line:#e8ebf0; --grid:#eef0f4; --axis:#cbd2dc; --accent:#3b5bdb; --accent-ink:#ffffff; --accent-soft:#eef2ff;
+  --good:#0f7b3f; --bad:#c9303e; --warn:#a86a00; --good-soft:#e8f6ee; --bad-soft:#fdecee;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#4a3aa7; --s0:#94a3b8;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.12);
+  --hero1:#0f1b3d; --hero2:#2f4fc4; --glow:rgba(120,160,255,.35); --navbg:rgba(255,255,255,.82);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme: dark;
-    --bg:#0b0f1a; --card:#151b2b; --card2:#1a2135; --ink:#f2f5fb; --ink2:#b7c0d3; --muted:#7f8aa3;
-    --line:#232c42; --grid:#1f2740; --axis:#34405c; --accent:#4d85f0; --accent-ink:#ffffff;
-    --good:#34c46a; --bad:#ef6b73; --warn:#e3a33a;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#7f8aa3;
-    --shadow:none; --hero1:#13244f; --hero2:#2552b8;
+    --bg:#0a0d14; --card:#131824; --card2:#1a2030; --ink:#eef2f8; --ink2:#a9b4c8; --muted:#738099;
+    --line:#212838; --grid:#1c2232; --axis:#323b50; --accent:#6d8dff; --accent-ink:#0a0d14; --accent-soft:#1b2440;
+    --good:#3ccf7a; --bad:#f06f78; --warn:#e3a33a; --good-soft:#12291d; --bad-soft:#2d1519;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#64748b;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset; --hero1:#101a38; --hero2:#2a46b0; --glow:rgba(120,160,255,.25); --navbg:rgba(19,24,36,.82);
   }
 }
 :root[data-theme="dark"]{
   color-scheme: dark;
-  --bg:#0b0f1a; --card:#151b2b; --card2:#1a2135; --ink:#f2f5fb; --ink2:#b7c0d3; --muted:#7f8aa3;
-  --line:#232c42; --grid:#1f2740; --axis:#34405c; --accent:#4d85f0; --accent-ink:#ffffff;
-  --good:#34c46a; --bad:#ef6b73; --warn:#e3a33a;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#7f8aa3;
-  --shadow:none; --hero1:#13244f; --hero2:#2552b8;
+  --bg:#0a0d14; --card:#131824; --card2:#1a2030; --ink:#eef2f8; --ink2:#a9b4c8; --muted:#738099;
+  --line:#212838; --grid:#1c2232; --axis:#323b50; --accent:#6d8dff; --accent-ink:#0a0d14; --accent-soft:#1b2440;
+  --good:#3ccf7a; --bad:#f06f78; --warn:#e3a33a; --good-soft:#12291d; --bad-soft:#2d1519;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9; --s0:#64748b;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset; --hero1:#101a38; --hero2:#2a46b0; --glow:rgba(120,160,255,.25); --navbg:rgba(19,24,36,.82);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+.num,.big,.val,.v{font-variant-numeric:tabular-nums}
 body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 button{font:inherit;color:inherit;cursor:pointer}
 input,select{font:inherit;color:var(--ink)}
 .wrap{max-width:560px;margin:0 auto;padding:12px 16px 24px}
 .top{display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px}
-.brand{font-weight:700;font-size:20px;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
-.brand svg{width:26px;height:26px}
+.brand{font-weight:750;font-size:19px;letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.brand svg{width:28px;height:28px;border-radius:9px;box-shadow:0 4px 12px -4px var(--accent)}
 .iconbtn{border:0;background:transparent;padding:8px;border-radius:10px;color:var(--ink2);display:inline-flex}
 .iconbtn:active{background:var(--line)}
-.status{font-size:12px;color:var(--muted)}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--line)}
-.hero{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border:0}
-.hero .lbl{opacity:.8;font-size:13px}
-.hero .big{font-size:34px;font-weight:700;letter-spacing:-.5px;margin:2px 0 6px}
-.hero .row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.16)}
-.hero .sub{font-size:12px;opacity:.75;margin-top:6px}
+.status{font-size:12px;color:var(--muted);text-align:right;line-height:1.25;max-width:150px}
+.brand{flex:none}
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.hero{position:relative;overflow:hidden;background:radial-gradient(120% 140% at 100% 0%,var(--glow),transparent 55%),linear-gradient(150deg,var(--hero1) 0%,var(--hero2) 100%);color:#fff;border:0;padding:22px 20px 20px;box-shadow:0 18px 40px -22px var(--hero2)}
+.hero::after{content:"";position:absolute;right:-40px;bottom:-60px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero .lbl{opacity:.75;font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.hero .big{font-size:40px;font-weight:750;letter-spacing:-1.2px;line-height:1.1}
+.hero .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:650;background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+.hero .sub{font-size:13px;opacity:.8;position:relative;z-index:1}
 .cmp{padding:4px 16px}
+.whatif .wt{font-weight:700;font-size:15px;margin-bottom:10px;letter-spacing:-.1px}
+.whatif .wr{margin:12px 0}
+.whatif .wl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--ink2)}
+.whatif .wl .k{display:flex;align-items:center;gap:8px}
+.whatif .wl b{color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:650}
+.whatif .wl small{font-weight:500;color:var(--muted);font-size:12px;margin-left:2px}
+.whatif .wbar{height:6px;border-radius:999px;background:var(--card2);margin-top:6px;overflow:hidden}
+.whatif .wbar span{display:block;height:100%;border-radius:999px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.whatif .verdicts{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.whatif .verdict{font-size:13.5px;font-weight:600;padding:9px 12px;border-radius:12px;display:flex;gap:8px;align-items:center}
+.whatif .verdict.good{background:var(--good-soft)} .whatif .verdict.bad{background:var(--bad-soft)}
+.whatif .verdict.muted{background:var(--card2)}
 .cmp .r{padding:11px 0;border-top:1px solid var(--line)}
 .cmp .r:first-child{border-top:0}
 .cmp .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -64,33 +79,34 @@ input,select{font:inherit;color:var(--ink)}
 .cmp .s{font-size:12.5px;color:var(--muted);margin-top:2px}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
 .good{color:var(--good)} .bad{color:var(--bad)} .muted{color:var(--muted)}
-.seg{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:2px}
-.seg button{border:0;background:transparent;padding:5px 10px;border-radius:8px;font-size:13px;color:var(--ink2)}
+.seg{display:inline-flex;background:var(--card2);border-radius:12px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:9px;font-size:13px;color:var(--ink2)}
 .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:var(--shadow)}
 .chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.chart{position:relative;height:230px;touch-action:pan-y;user-select:none}
+.chart{position:relative;height:220px;touch-action:pan-y;user-select:none;margin:4px -4px 0}
 .chart svg{display:block;width:100%;height:100%;overflow:visible}
-.chart .tip{position:absolute;top:0;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);white-space:nowrap;z-index:2}
+.chart .tip{position:absolute;top:0;pointer-events:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px;box-shadow:0 10px 30px -10px rgba(15,23,42,.35);white-space:nowrap;z-index:2}
 .chart .tip b{display:block;margin-bottom:3px;font-size:12px}
 .chart .tip div{display:flex;align-items:center;gap:6px;justify-content:space-between}
 .chart .tip span.n{font-variant-numeric:tabular-nums;font-weight:600;margin-left:12px}
-.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);border-radius:999px;padding:4px 10px;font-size:12.5px;color:var(--ink2)}
-.chip.off{opacity:.45}
-.chip .sw{width:14px;height:3px;border-radius:2px}
-.periods{display:flex;gap:4px;justify-content:center;margin-top:8px}
-.periods button{border:0;background:transparent;color:var(--muted);font-size:12.5px;padding:4px 9px;border-radius:8px}
-.periods button.on{background:var(--card2);color:var(--ink);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;background:var(--card2);border-radius:999px;padding:5px 11px;font-size:12.5px;color:var(--ink2);transition:opacity .15s}
+.chip.off{opacity:.5;background:transparent;border-color:var(--line)}
+.chip .sw{width:8px;height:8px;border-radius:50%}
+.periods{display:flex;gap:2px;justify-content:space-between;margin-top:10px;background:var(--card2);border-radius:12px;padding:3px}
+.periods button{flex:1;border:0;background:transparent;color:var(--muted);font-size:12.5px;padding:6px 0;border-radius:9px;font-weight:600}
+.periods button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.12)}
 .empty-chart{height:160px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:0 20px}
-.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);width:100%;font-size:15px}
-.btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:650;background:var(--accent);color:var(--accent-ink);width:100%;font-size:15px;box-shadow:0 6px 16px -8px var(--accent);transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
 .btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line)}
 .btn.small{width:auto;padding:8px 12px;font-size:13px;border-radius:10px}
 .btnrow{display:flex;gap:8px}
 .btnrow .btn{flex:1}
-h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:flex;justify-content:space-between;align-items:center}
-.list{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
-.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left}
+h2{font-size:12px;margin:22px 6px 8px;color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.list{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+.item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left}
 .item:first-child{border-top:0}
 .item:active{background:var(--card2)}
 .item .main{flex:1;min-width:0}
@@ -99,7 +115,7 @@ h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:
 .item .right{text-align:right;flex:none}
 .item .val{font-weight:600;font-variant-numeric:tabular-nums}
 .item .chg{font-size:12px}
-.acc-head{display:block;padding:12px 14px;background:var(--card2);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
+.acc-head{display:block;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);width:100%;border-top:0;border-left:0;border-right:0;text-align:left}
 .acc-head .name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
 .acc-head{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
 .acc-head .lft{display:flex;align-items:center;gap:6px;min-width:0;flex:1;margin-right:8px}
@@ -111,7 +127,8 @@ h2{font-size:15px;margin:18px 4px 8px;color:var(--ink2);font-weight:600;display:
 .list.closed .acc-head{border-bottom:0}
 .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);margin-left:4px}
 .badge.warn{color:var(--warn)}
-.ticon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:700;font-size:13px;color:#fff}
+.ticon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:700;font-size:13px;color:#fff;position:relative;overflow:hidden}
+.ticon::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.25),transparent 60%)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:8px 6px;text-align:right;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
 th{color:var(--muted);font-weight:600;font-size:12px;border-top:0}
@@ -121,22 +138,23 @@ th:first-child,td:first-child{text-align:left}
 .kv:first-child{border-top:0}
 .kv .k{color:var(--ink2)}
 .kv .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
-.nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--navbg);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .nav .in{display:flex;max-width:560px;width:100%}
 .nav button{flex:1;border:0;background:transparent;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;color:var(--muted)}
-.nav button.on{color:var(--accent);font-weight:600}
-.nav svg{width:22px;height:22px}
+.nav button.on{color:var(--accent);font-weight:650}
+.nav svg{width:22px;height:22px;padding:3px 14px;box-sizing:content-box;border-radius:999px;transition:background .15s}
+.nav button.on svg{background:var(--accent-soft)}
 .page{position:fixed;inset:0;background:var(--bg);z-index:30;overflow-y:auto;padding-bottom:24px}
 .page .top{position:sticky;top:0;background:var(--bg);z-index:3;padding:10px 12px;margin:0}
 .page .title{font-weight:700;font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:4px}
 .sheet-bg{position:fixed;inset:0;background:rgba(5,8,16,.5);z-index:40;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;padding:8px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:24px 24px 0 0;max-height:92vh;overflow-y:auto;padding:8px 16px calc(20px + env(safe-area-inset-bottom))}
 .sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 10px}
 .sheet h3{margin:0 0 12px;font-size:18px}
 label.f{display:block;margin-bottom:12px}
 label.f span{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:5px}
-.inp{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);font-size:16px;outline:none}
-.inp:focus{border-color:var(--accent)}
+.inp{width:100%;padding:12px 13px;border-radius:14px;border:1px solid var(--line);background:var(--card2);font-size:16px;outline:none;transition:border-color .15s,box-shadow .15s}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .hint{font-size:12px;color:var(--muted);margin:-6px 0 12px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .typepick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
@@ -196,7 +214,6 @@ const L = {
   diff_infl:['vs inflation','наспрам инфлације','mot inflasjon'],
   p6m:['6M','6М','6M'], p1y:['1Y','1Г','1Å'], p3y:['3Y','3Г','3Å'], pall:['All','Све','Alt'],
   chart_empty:['The chart appears after your first entry','График се појављује после првог уноса','Grafen vises etter første registrering'],
-  detailed_stats:['Detailed statistics','Детаљна статистика','Detaljert statistikk'],
   add_holding:['Add holding','Додај ставку','Legg til'],
   add_account:['Add account','Додај рачун','Legg til konto'],
   new_entry:['New entry','Нови унос','Ny registrering'],
@@ -327,6 +344,17 @@ const L = {
   rename:['Rename','Промени назив','Endre navn'],
   new_account:['+ New account','+ Нови рачун','+ Ny konto'],
   new_account_name:['Name of the new account','Назив новог рачуна','Navn på den nye kontoen'],
+  what_if:['What if the same money had been…','Шта би било да је исти новац био…','Hva om de samme pengene hadde vært…'],
+  wi_you:['Your investments','Твоја улагања','Dine investeringer'],
+  wi_bank:['In the bank','У банци','I banken'],
+  wi_btc:['In Bitcoin','У биткоину','I bitcoin'],
+  wi_infl:['Only keeping up with inflation','Само да прати инфлацију','Bare fulgt inflasjonen'],
+  v_bank_better:['Better than the bank by {v}','Боље од банке за {v}','Bedre enn banken med {v}'],
+  v_bank_worse:['The bank would have given {v} more','Банка би донела {v} више','Banken ville gitt {v} mer'],
+  v_btc_better:['Better than Bitcoin by {v}','Боље од биткоина за {v}','Bedre enn bitcoin med {v}'],
+  v_btc_worse:['Bitcoin would have given {v} more','Биткоин би донео {v} више','Bitcoin ville gitt {v} mer'],
+  v_infl_better:['Above inflation by {v}','Изнад инфлације за {v}','Over inflasjonen med {v}'],
+  v_infl_worse:['Below inflation by {v}','Испод инфлације за {v}','Under inflasjonen med {v}'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -917,22 +945,23 @@ const DIFF_LABEL = {sav:'diff_bank', btc:'diff_btc', inf:'diff_infl'};
 const PERIODS = [['p6m', 183], ['p1y', 365], ['p3y', 1096], ['pall', 0]];
 
 function chartCard(A, id){
-  const mode = UI.chartMode || 'value';
+  const withMode = id === 'chart-stats';
+  const mode = withMode ? UI.chartMode || 'value' : 'value';
   const period = UI.period || 'pall';
   const hasCompare = A.n0 != null;
-  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  const vis = UI.series || {act:1, sav:1, btc:0, inf:0, inv:0};
   let keys = mode === 'value' ? ['act', 'sav', 'btc', 'inf', 'inv'] : ['sav', 'btc', 'inf'];
   if(!hasCompare) keys = mode === 'value' ? ['act'] : [];
   if(!A.btcOk) keys = keys.filter(k => k !== 'btc');
   const legendKeys = keys.filter(k => !(mode === 'value' && k === 'act'));
   return `<div class="card">
-    <div class="chart-head">
+    ${withMode ? `<div class="chart-head">
       <div class="seg" data-act="mode">
         <button class="${mode === 'value' ? 'on' : ''}" data-v="value">${t('mode_value')}</button>
         <button class="${mode === 'diff' ? 'on' : ''}" data-v="diff" ${hasCompare ? '' : 'disabled'}>${t('mode_diff')}</button>
       </div>
-    </div>
-    <div class="chart" id="${id}" data-keys="${keys.join(',')}"></div>
+    </div>` : ''}
+    <div class="chart" id="${id}" data-keys="${keys.join(',')}" data-mode="${mode}"></div>
     <div class="periods">${PERIODS.map(([k]) => `<button data-period="${k}" class="${period === k ? 'on' : ''}">${t(k)}</button>`).join('')}</div>
     ${legendKeys.length ? `<div class="legend">${mode === 'value' ? `<span class="chip"><span class="sw" style="background:${SERIES.act.color}"></span>${t('portfolio')}</span>` : ''}
       ${legendKeys.map(k => `<button class="chip ${vis[k] ? '' : 'off'}" data-series="${k}"><span class="sw" style="background:${SERIES[k].color}"></span>${mode === 'diff' ? t(DIFF_LABEL[k]) : t(SERIES[k].key)}</button>`).join('')}</div>` : ''}
@@ -942,8 +971,8 @@ function chartCard(A, id){
 function drawChart(el, A){
   if(!el) return;
   const E = getEngine();
-  const mode = UI.chartMode || 'value';
-  const vis = UI.series || {act:1, sav:1, btc:1, inf:0, inv:1};
+  const mode = el.dataset.mode || 'value';
+  const vis = UI.series || {act:1, sav:1, btc:0, inf:0, inv:0};
   const keys = el.dataset.keys ? el.dataset.keys.split(',').filter(Boolean) : [];
   const days = (PERIODS.find(p => p[0] === (UI.period || 'pall')) || PERIODS[3])[1];
   let from = A.firstIdx;
@@ -959,7 +988,7 @@ function drawChart(el, A){
     lines.push({k, data, color:SERIES[k].color, dash:SERIES[k].dash && mode === 'value' ? SERIES[k].dash : null,
       label: mode === 'value' ? t(SERIES[k].key) : t(DIFF_LABEL[k])});
   }
-  const W = el.clientWidth || 320, H = 230, padL = 4, padR = 46, padT = 10, padB = 24;
+  const W = el.clientWidth || 320, H = 220, padL = 4, padR = 46, padT = 14, padB = 24;
   const span = Math.max(1, to - from);
   const step = Math.max(1, Math.ceil(span / 320));
   const idxs = [];
@@ -974,11 +1003,12 @@ function drawChart(el, A){
   min = Math.min(min, ticks[0]); max = Math.max(max, ticks[ticks.length - 1]);
   const x = i => padL + (W - padL - padR) * (i - from) / span;
   const y = v => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
-  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+  const gid = 'g' + el.id;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--s1)" stop-opacity=".22"/><stop offset="1" stop-color="var(--s1)" stop-opacity="0"/></linearGradient></defs>`;
   for(const tv of ticks){
     const yy = y(tv).toFixed(1);
     const zero = mode === 'diff' && Math.abs(tv) < 1e-9;
-    svg += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="${zero ? 'var(--axis)' : 'var(--grid)'}" stroke-width="${zero ? 1.5 : 1}"/>`;
+    svg += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="${zero ? 'var(--axis)' : 'var(--grid)'}" stroke-width="1" shape-rendering="crispEdges"/>`;
     svg += `<text x="${W - padR + 6}" y="${+yy + 4}" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${esc(fmtCompact(tv))}</text>`;
   }
   // x labels: first, middle, last
@@ -998,17 +1028,17 @@ function drawChart(el, A){
     }
     if(l.k === 'act' && mode === 'value' && d){
       const fi = idxs.find(i => l.data[i] != null), li = to;
-      svg += `<path d="${d}L${x(li).toFixed(1)},${H - padB}L${x(fi).toFixed(1)},${H - padB}Z" fill="var(--s1)" opacity=".08"/>`;
+      svg += `<path d="${d}L${x(li).toFixed(1)},${H - padB}L${x(fi).toFixed(1)},${H - padB}Z" fill="url(#${gid})"/>`;
     }
-    svg += `<path d="${d}" fill="none" stroke="${l.color}" stroke-width="${l.k === 'act' ? 2.4 : 2}" stroke-linejoin="round" stroke-linecap="round" ${l.dash ? `stroke-dasharray="${l.dash}"` : ''} vector-effect="non-scaling-stroke"/>`;
+    svg += `<path d="${d}" fill="none" stroke="${l.color}" stroke-width="${l.k === 'act' ? 2.5 : 2}" stroke-linejoin="round" stroke-linecap="round" ${l.dash ? `stroke-dasharray="${l.dash}"` : ''} vector-effect="non-scaling-stroke"/>`;
   }
+  // Entry dots only while they stay readable; every line ends in a ringed dot.
   if(mode === 'value'){
     const act = lines.find(l => l.k === 'act');
-    if(act) for(const di of A.dots){
-      if(di < from || di > to || act.data[di] == null) continue;
-      svg += `<circle cx="${x(di).toFixed(1)}" cy="${y(act.data[di]).toFixed(1)}" r="3.2" fill="var(--s1)" stroke="var(--card)" stroke-width="2"/>`;
-    }
+    const ds = act ? [...A.dots].filter(di => di >= from && di < to && act.data[di] != null) : [];
+    if(ds.length <= 24) for(const di of ds) svg += `<circle cx="${x(di).toFixed(1)}" cy="${y(act.data[di]).toFixed(1)}" r="3" fill="var(--card)" stroke="var(--s1)" stroke-width="1.6"/>`;
   }
+  for(const l of lines){ const v = l.data[to]; if(v != null) svg += `<circle cx="${x(to).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4.5" fill="${l.color}" stroke="var(--card)" stroke-width="2"/>`; }
   svg += `<g class="cross" style="display:none"><line y1="${padT}" y2="${H - padB}" stroke="var(--axis)" stroke-width="1"/></g></svg><div class="tip hidden"></div>`;
   el.innerHTML = svg;
 
@@ -1103,31 +1133,41 @@ function topBar(){
     <button class="iconbtn" data-act="refresh" aria-label="${t('refresh')}">${ICONS.refresh}</button></div></div>`;
 }
 
+// Headline card: the gain is the big number; value and money put in are the line below.
 function heroCard(m, title){
   if(!m) return '';
-  return `<div class="card hero">
-    <div class="lbl">${esc(title)}</div>
+  if(!m.tracked) return `<div class="card hero">
+    <div class="lbl">${esc(title || t('total_value'))}</div>
     <div class="big">${esc(fmtMoney(m.value))}</div>
-    ${m.tracked ? `<div class="row"><span class="pill">${arrow(m.gain)}${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</span><span style="font-size:12.5px;opacity:.8">${t('gain_since')}</span></div>
-      ${m.preGain ? `<div class="sub">${esc(t('pre_gain', {v:fmtMoney(m.preGain, {sign:true})}))}</div>` : ''}`
-      : `<div class="sub">${t('no_compare')}</div>`}
+    <div class="sub">${t('no_compare')}</div></div>`;
+  return `<div class="card hero">
+    <div class="lbl">${esc(t('gain'))}${title ? ' · ' + esc(title) : ''}</div>
+    <div class="row"><span class="big">${esc(fmtMoney(m.gain, {sign:true}))}</span><span class="pill">${esc(fmtPct(m.gainPct))}</span></div>
+    <div class="sub">${esc(t('value'))} ${esc(fmtMoney(m.value))} · ${esc(t('invested'))} ${esc(fmtMoney(m.inv))}</div>
   </div>`;
 }
-function tilesHtml(m, isBtcOnly){
+// "What if…": the same money in the bank, in Bitcoin, or only keeping up with inflation, as bars,
+// followed by plain verdicts ("better than the bank by …").
+function compareCard(m, isBtcOnly){
   if(!m || !m.tracked) return '';
-  const row = (label, color, altGain, altPct, name) => {
-    if(altGain == null) return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('missing_price')}</div></div>`;
-    const d = m.gain - altGain;
-    const rt = ratioText(m.gain, altGain);
-    return `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:${color}"></span>${label}</span>
-      <span class="v ${signCls(d)}">${arrow(d)}${esc(fmtMoney(d, {sign:true}))}</span></div>
-      <div class="s">${rt ? esc(rt) + ' · ' : ''}${esc(t('alt_gain', {n:name, v:fmtMoney(altGain, {sign:true})}))} (${esc(fmtPct(altPct))})</div></div>`;
+  const rows = [{k:'you', g:m.gain, p:m.gainPct, c:'var(--s1)'}, {k:'bank', g:m.bankGain, p:m.bankPct, c:'var(--s3)'}];
+  if(!isBtcOnly) rows.push({k:'btc', g:m.btcGain, p:m.btcPct, c:'var(--s2)'});
+  rows.push({k:'infl', g:m.inflGain, p:m.inflPct, c:'var(--s4)'});
+  const max = Math.max(1, ...rows.filter(r => r.g != null).map(r => Math.abs(r.g)));
+  const bar = r => r.g == null ? '' : `<div class="wbar"><span style="width:${Math.max(2, Math.abs(r.g) / max * 100).toFixed(1)}%;background:${r.g < 0 ? 'var(--bad)' : r.c}"></span></div>`;
+  const verdict = (alt, better, worse) => {
+    if(alt == null) return '';
+    const d = m.gain - alt;
+    return `<div class="verdict ${d >= 0 ? 'good' : 'bad'}"><span>${d >= 0 ? '✓' : '✗'}</span> ${esc(t(d >= 0 ? better : worse, {v:fmtMoney(Math.abs(d))}))}</div>`;
   };
-  return `<div class="card cmp">
-    ${row(t('vs_bank'), 'var(--s3)', m.bankGain, m.bankPct, t('bank'))}
-    ${isBtcOnly ? `<div class="r"><div class="l1"><span class="t"><span class="dot" style="background:var(--s2)"></span>${t('vs_btc')}</span><span class="v muted">${t('none')}</span></div><div class="s">${t('btc_itself')}</div></div>` : row(t('vs_btc'), 'var(--s2)', m.btcGain, m.btcPct, 'BTC')}
-    ${row(t('vs_infl'), 'var(--s4)', m.inflGain, m.inflPct, t('inflation'))}
-  </div>`;
+  return `<div class="card whatif"><div class="wt">${t('what_if')}</div>
+    ${rows.map(r => `<div class="wr"><div class="wl"><span class="k"><span class="dot" style="background:${r.c}"></span>${t('wi_' + r.k)}</span>
+      <b class="${r.g == null ? 'muted' : r.k === 'you' ? signCls(r.g) : ''}">${r.g == null ? t('none') : esc(fmtMoney(r.g, {sign:true}))}${r.p != null ? ` <small>${esc(fmtPct(r.p))}</small>` : ''}</b></div>${bar(r)}</div>`).join('')}
+    <div class="verdicts">
+      ${verdict(m.bankGain, 'v_bank_better', 'v_bank_worse')}
+      ${isBtcOnly ? '' : m.btcGain == null ? `<div class="verdict muted">BTC: ${t('missing_price')}</div>` : verdict(m.btcGain, 'v_btc_better', 'v_btc_worse')}
+      ${verdict(m.inflGain, 'v_infl_better', 'v_infl_worse')}
+    </div></div>`;
 }
 
 function viewHome(){
@@ -1138,10 +1178,9 @@ function viewHome(){
   }
   const E = getEngine(), A = E.total(), m = metrics(A);
   let html = topBar() + demoBanner();
-  html += heroCard(m, t('total_value')) + tilesHtml(m);
+  html += heroCard(m) + compareCard(m);
   html += chartCard(A, 'chart-home');
-  html += `<button class="btn ghost" data-act="stats">${t('detailed_stats')}</button>`;
-  html += `<h2>${t('nav_holdings')}</h2>` + holdingsList(true);
+  html += `<h2>${t('accounts')}</h2>` + accountsSummary();
   return html;
 }
 function demoBanner(){ return D.demo ? `<div class="banner"><span>${t('demo_on')}</span><button class="btn small ghost" data-act="demo-clear">${t('demo_clear')}</button></div>` : ''; }
@@ -1167,6 +1206,16 @@ function holdingRow(h){
     ${m && m.tracked ? `<div class="chg ${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : ''}</div>
   </button>`;
 }
+// One row per account (name, value, gain); tapping opens the account with its holdings.
+function accountsSummary(){
+  const E = getEngine();
+  return `<div class="list">${D.accounts.filter(a => D.holdings.some(h => h.accountId === a.id)).map(a => {
+    const m = metrics(E.account(a.id)), n = D.holdings.filter(h => h.accountId === a.id).length;
+    return `<button class="item" data-open-account="${a.id}"><div class="main"><div class="name">${esc(a.name)}</div><div class="meta">${n} · ${t('nav_holdings')}</div></div>
+      <div class="right"><div class="val">${m ? esc(fmtMoney(m.value)) : t('none')}</div>
+      ${m && m.tracked ? `<div class="chg ${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : ''}</div></button>`;
+  }).join('')}</div>`;
+}
 function holdingsList(compact){
   const E = getEngine();
   let html = '';
@@ -1176,7 +1225,7 @@ function holdingsList(compact){
     const m = metrics(E.account(a.id));
     // Tapping the header folds the account open or closed (remembered); the arrow opens its page.
     const open = !(UI.closedAcc || {})[a.id];
-    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain - m.bankGain)}">${esc(t('vs_bank'))} ${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}</div>` : '';
+    const diff = m && m.tracked ? `<div class="sub ${signCls(m.gain)}">${esc(t('gain'))} ${esc(fmtMoney(m.gain, {sign:true}))} · ${esc(fmtPct(m.gainPct))}</div>` : '';
     html += `<div class="list ${open ? '' : 'closed'}"><div class="acc-head ${open ? 'open' : ''}" data-toggle-account="${a.id}" role="button" aria-expanded="${open}">
       <div class="top"><span class="lft"><span class="chev">${ICONS.chev}</span><span class="name">${esc(a.name)}</span><span class="cnt">${hs.length}</span></span>
       <span class="rgt">${m ? `<b>${esc(fmtMoney(m.value))}</b>` : ''}<button class="iconbtn" data-open-account="${a.id}" aria-label="${esc(a.name)}">${ICONS.fwd}</button></span></div>${diff}</div>
@@ -1212,7 +1261,7 @@ function viewStats(){
   let html = topBar();
   html += `<label class="f"><span>${t('scope')}</span><select class="inp" data-act="scope">${scopeOptions(scope)}</select></label>`;
   if(!m){ return html + `<div class="card empty-chart">${t('chart_empty')}</div>`; }
-  html += heroCard(m, t('total_value'));
+  html += heroCard(m);
   if(m.tracked){
     const i = E.len - 1;
     const xr = v => v === 'short' ? t('too_short') : v == null ? t('none') : fmtPct(v);
@@ -1232,6 +1281,7 @@ function viewStats(){
     <div class="kv"><span class="k">${t('real_gain')}</span><span class="v ${signCls(m.gain - m.inflGain)}">${esc(fmtMoney(m.gain - m.inflGain, {sign:true}))}</span></div>
     <div class="kv"><span class="k">${t('maxdd')}</span><span class="v">${esc(fmtPct(-maxDrawdown(A), false))}</span></div>
     <div class="kv"><span class="k">${t('started')}</span><span class="v">${esc(fmtDate(dstr(A.n0)))}</span></div>
+    ${m.preGain ? `<div class="kv"><span class="k">${esc(t('pre_gain', {v:''}).replace(/[:\s]+$/, ''))}</span><span class="v">${esc(fmtMoney(m.preGain, {sign:true}))}</span></div>` : ''}
     </div>
     <div class="sectnote">${t('compare_note')}</div>`;
   }
@@ -1336,7 +1386,7 @@ function renderPage(){
     const m = metrics(A);
     body += heroCard(m, t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '') + (h.currency && h.currency !== D.settings.baseCurrency ? ' · ' + h.currency : ''));
     if(!m) body += `<div class="card empty-chart">${t('chart_empty')}</div>`;
-    body += tilesHtml(m, h.type === 'btc');
+    body += compareCard(m, h.type === 'btc');
     if(m) body += chartCard(A, 'chart-page');
     if(h.type === 'fund'){
       const hasTx = D.trades.some(e => e.holdingId === h.id);
@@ -1355,7 +1405,7 @@ function renderPage(){
     if(!a){ page = null; if(el) el.remove(); return; }
     title = a.name; A = E.account(a.id);
     const m = metrics(A);
-    body += heroCard(m, t('account')) + tilesHtml(m) + (m ? chartCard(A, 'chart-page') : '');
+    body += heroCard(m) + compareCard(m) + (m ? chartCard(A, 'chart-page') : '');
     body += `<button class="btn ghost" style="margin-bottom:12px" data-act="edit-account">${t('rename')}</button>`;
     const hs = D.holdings.filter(h => h.accountId === a.id);
     body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
@@ -2046,7 +2096,7 @@ document.addEventListener('click', e => {
   const d = b.dataset;
   if(d.tab){ tab = d.tab; UI.tab = tab; saveUI(); window.scrollTo(0, 0); render(); return; }
   if(d.period){ UI.period = d.period; saveUI(); render(); return; }
-  if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:1, inf:0, inv:1}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
+  if(d.series){ UI.series = Object.assign({act:1, sav:1, btc:0, inf:0, inv:0}, UI.series); UI.series[d.series] = UI.series[d.series] ? 0 : 1; saveUI(); render(); return; }
   if(d.v && b.parentElement.dataset.act === 'mode'){ UI.chartMode = d.v; saveUI(); render(); return; }
   if(d.openHolding){ openPage({type:'holding', id:d.openHolding}); return; }
   if(d.toggleAccount){ UI.closedAcc = Object.assign({}, UI.closedAcc); if(UI.closedAcc[d.toggleAccount]) delete UI.closedAcc[d.toggleAccount]; else UI.closedAcc[d.toggleAccount] = 1; saveUI(); render(); return; }
