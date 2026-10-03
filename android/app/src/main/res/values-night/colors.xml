@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg">#0B0F1A</color>
+    <color name="w_bg">#131824</color>
+    <color name="w_ink">#EEF2F8</color>
+    <color name="w_muted">#738099</color>
 </resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_desc">Total value and its change over the last month</string>
+    <string name="widget_open">Open GrowPort to load your data</string>
+</resources>

@@ -303,6 +303,12 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> pageReady = true);
         }
 
+        /** Numbers for the home-screen widget (ChartWidget), as JSON from the page. */
+        @JavascriptInterface
+        public void setWidget(final String json) {
+            new Thread(() -> ChartWidget.save(MainActivity.this, json)).start();
+        }
+
         @JavascriptInterface
         public boolean canSelfUpdate() {
             return BuildConfig.SELF_UPDATE;
