@@ -333,8 +333,10 @@ const L = {
   btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
   import_tx:['Import from bank','Увоз из банке','Import fra banken'],
   import_tx_hint:['PDF, CSV or a pasted table from your bank. A transaction list adds purchases and sales (already imported rows are skipped); a holdings statement updates the values and checks the units.','PDF, CSV или налепљена табела из банке. Листа трансакција додаје куповине и продаје (већ увезени редови се прескачу); табела стања ажурира вредности и проверава уделе.','PDF, CSV eller en innlimt tabell fra banken. En transaksjonsliste legger til kjøp og salg (rader som finnes fra før hoppes over); en beholdningsoversikt oppdaterer verdiene og sjekker andelene.'],
-  import_file:['Choose file (PDF, CSV)','Изабери фајл (PDF, CSV)','Velg fil (PDF, CSV)'],
+  import_file:['Choose files (PDF, CSV)','Изабери фајлове (PDF, CSV)','Velg filer (PDF, CSV)'],
   pdf_reading:['Reading PDF…','Читам PDF…','Leser PDF…'],
+  pdf_reading_n:['Reading file {i} of {n}…','Читам фајл {i} од {n}…','Leser fil {i} av {n}…'],
+  pdf_fail_n:['{n} file(s) could not be read','{n} фајл(ова) није могло да се прочита','{n} fil(er) kunne ikke leses'],
   pdf_fail:['Could not read the PDF. Reading a PDF needs an internet connection; you can also copy its text and paste it here.','PDF није могао да се прочита. За читање PDF-а треба интернет; можеш и да копираш текст из PDF-а и налепиш га овде.','Kunne ikke lese PDF-en. Lesing av PDF krever internett; du kan også kopiere teksten og lime den inn her.'],
   import_read:['Read','Учитај','Les inn'],
   import_found:['{n} transactions in {f} funds','{n} трансакција у {f} фондова','{n} transaksjoner i {f} fond'],
@@ -2302,7 +2304,7 @@ function importTxForm(){
     <div class="hint">${t('import_tx_hint')}</div>
     <textarea class="inp" id="x-text" rows="7" style="font-size:13px;font-family:ui-monospace,monospace;resize:vertical" placeholder="2026-09-14\tKjøp\tKLP AksjeUSA Indeks N\t0,0388\t1 888,66\t73,28"></textarea>
     <div class="btnrow" style="margin:8px 0 12px"><button class="btn ghost small" id="x-file-b">${t('import_file')}</button><button class="btn small" id="x-read">${t('import_read')}</button></div>
-    <input type="file" id="x-file" accept=".pdf,.csv,.txt,.tsv,application/pdf,text/*" class="hidden">
+    <input type="file" id="x-file" accept=".pdf,.csv,.txt,.tsv,application/pdf,text/*" class="hidden" multiple>
     <div class="row2">
       <label class="f"><span>${t('account')}</span><select class="inp" id="x-acc">${accOpts}</select></label>
       <label class="f"><span>${t('currency')}</span><select class="inp" id="x-cur">${CURRENCIES.map(c => `<option ${c === D.settings.baseCurrency ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
@@ -2438,19 +2440,32 @@ function importTxForm(){
     sh.querySelector('#x-read').onclick = read;
     sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
     // Each picked file is added to the text, so several statements (e.g. one PDF per year) import together.
-    const addText = txt => { const ta = sh.querySelector('#x-text'); ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt; read(); };
-    sh.querySelector('#x-file').onchange = ev => {
-      const f = ev.target.files[0]; if(!f) return;
-      ev.target.value = '';
+    // Several files (e.g. one PDF per year) can be picked at once; they are read one after another
+    // and their text is added together, so the preview covers all of them.
+    const readFile = f => new Promise(ok => {
       const rd = new FileReader();
       if(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'){
-        prev.innerHTML = `<div class="hint">${t('pdf_reading')}</div>`;
-        rd.onload = () => pdfToText(new Uint8Array(rd.result)).then(addText).catch(() => { prev.innerHTML = `<div class="hint">${t('pdf_fail')}</div>`; });
+        rd.onload = () => pdfToText(new Uint8Array(rd.result)).then(ok, () => ok(null));
         rd.readAsArrayBuffer(f);
       } else {
-        rd.onload = () => addText(rd.result);
+        rd.onload = () => ok(String(rd.result));
         rd.readAsText(f);
       }
+    });
+    sh.querySelector('#x-file').onchange = async ev => {
+      const files = [...ev.target.files];
+      ev.target.value = '';
+      if(!files.length) return;
+      let failed = 0;
+      for(let k = 0; k < files.length; k++){
+        prev.innerHTML = `<div class="hint">${esc(t('pdf_reading_n', {i:k + 1, n:files.length}))}</div>`;
+        const txt = await readFile(files[k]);
+        if(txt == null){ failed++; continue; }
+        const ta = sh.querySelector('#x-text');
+        ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt;
+      }
+      if(sh.querySelector('#x-text').value.trim()) read();
+      if(failed) toast(t('pdf_fail_n', {n:failed}));
     };
   });
 }

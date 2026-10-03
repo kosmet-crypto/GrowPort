@@ -3,6 +3,7 @@ package app.growport;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -121,6 +122,9 @@ public class MainActivity extends Activity {
                 // Backups are JSON, but file managers label them inconsistently,
                 // so allow any file and let the page validate it.
                 i.setType("*/*");
+                // <input multiple> (e.g. several PDF statements at once) lets the user pick more files.
+                if (params != null && params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE)
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 try {
                     startActivityForResult(i, REQ_PICK_FILE);
                 } catch (ActivityNotFoundException e) {
@@ -382,7 +386,15 @@ public class MainActivity extends Activity {
         Uri uri = (resultCode == RESULT_OK && data != null) ? data.getData() : null;
 
         if (requestCode == REQ_PICK_FILE && pendingPick != null) {
-            pendingPick.onReceiveValue(uri != null ? new Uri[]{uri} : null);
+            Uri[] picked = null;
+            ClipData clip = (resultCode == RESULT_OK && data != null) ? data.getClipData() : null;
+            if (clip != null && clip.getItemCount() > 0) {
+                picked = new Uri[clip.getItemCount()];
+                for (int k = 0; k < picked.length; k++) picked[k] = clip.getItemAt(k).getUri();
+            } else if (uri != null) {
+                picked = new Uri[]{uri};
+            }
+            pendingPick.onReceiveValue(picked);
             pendingPick = null;
         } else if (requestCode == REQ_SAVE_FILE) {
             String text = pendingSaveText;
