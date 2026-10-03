@@ -391,6 +391,9 @@ const L = {
   skip_keep:['Skip','Прескочи','Hopp over'],
   skip_as_buy:['Import as purchase (adds units)','Увези као куповину (додаје уделе)','Importer som kjøp (legger til andeler)'],
   skip_as_sell:['Import as sale (removes units)','Увези као продају (одузима уделе)','Importer som salg (trekker fra andeler)'],
+  bad_title:['Rows that could not be read ({n})','Редови који нису прочитани ({n})','Rader som ikke kunne leses ({n})'],
+  bad_hint:['Exactly as they are in the file. If one is a purchase or sale, pick it, check the fund, units and price, and it is imported with the rest.','Тачно како стоје у фајлу. Ако је неки куповина или продаја, изабери то, провери фонд, уделе и цену, па се увози са осталима.','Akkurat slik de står i filen. Er en av dem et kjøp eller salg, velg det, sjekk fond, andeler og kurs, så importeres den med resten.'],
+  bad_fund:['Choose fund','Изабери фонд','Velg fond'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -1910,7 +1913,7 @@ function parseTransactions(text){
   const commaCsv = lines.length && (lines[0].match(/,/g) || []).length >= 3 && !/\d/.test(lines[0]);
   const delim = count('\t') >= lines.length / 2 ? '\t' : count(';') >= lines.length / 2 ? ';' : commaCsv ? ',' : null;
   let cols = null;
-  const rows = [], skipped = {}, skippedRows = []; let bad = 0;
+  const rows = [], skipped = {}, skippedRows = [], badRows = []; let bad = 0;
   for(const line of lines){
     let r;
     if(delim){
@@ -1930,17 +1933,37 @@ function parseTransactions(text){
       r = txFromCells(cells, cols);
     } else r = txFromTokens(line.trim().split(/\s+/));
     if(!r) continue;
+    const raw = line.replace(/\t+/g, ' | ').trim();
     if(r.side === 'skip' || !r.side){
       const k = String(r.type || '?').trim() || '?';
+      if(/^(side|page|sida|страна)$/i.test(k)) continue;   // page footer with a print date
+      // A dated row without a recognisable type may be a purchase the reader could not place: show it.
+      if(/^[-?–]$/.test(k)){ badRows.push({raw, date:r.date, guess:txGuess(raw)}); continue; }
       skipped[k] = (skipped[k] || 0) + 1;
       // Skipped rows that move units (reinvested dividends, switches, fees paid in units…) are listed.
       if(r.qty > 0 && r.name) skippedRows.push(Object.assign({}, r, {type:k}));
       continue;
     }
-    if(r.bad || !r.name){ bad++; continue; }
+    if(r.bad || !r.name){ bad++; badRows.push({raw, date:r.date, side:r.side, guess:txGuess(raw)}); continue; }
     rows.push(r);
   }
-  return {rows, skipped, skippedRows, bad};
+  return {rows, skipped, skippedRows, badRows, bad};
+}
+// Best guess for a row that could not be read: name words and the numbers in it, in order.
+function txGuess(raw){
+  const toks = raw.replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
+  const di = toks.findIndex(x => txDate(x));
+  const rest = toks.slice(di + 1);
+  const numToks = [], name = [];
+  rest.forEach((x, i) => {
+    if(i === 0 && txSide(x) !== 'skip') return;
+    if(/^[-−+]?[\d.,']+$/.test(x) && isFinite(txNum(x))) numToks.push(x); else if(!/^[-–]$/.test(x)) name.push(x);
+  });
+  // Join thousands groups ("3" "132,00") the most, then read units, price and total in order.
+  const segs = numSegs(numToks).sort((a, b) => a.nums.length - b.nums.length);
+  const nums = segs.length ? segs[0].nums.map(Math.abs) : [];
+  const qty = nums[0], price = nums.length >= 3 ? nums[1] : nums.length === 2 && qty > 0 ? nums[1] / qty : undefined;
+  return {name:name.join(' ').trim(), qty, price:price != null ? Math.round(price * 100) / 100 : undefined};
 }
 
 // PDF statements are read on the phone with Mozilla pdf.js, bundled in the APK next to this page
@@ -2241,9 +2264,17 @@ function importTxForm(){
       const match = hs.find(h => txKey(h.name) === k);
       return `<option value="">${esc(t('import_new_fund'))}</option>` + hs.map(h => `<option value="${h.id}" ${match === h ? 'selected' : ''}>${esc(h.name)}</option>`).join('');
     };
+    const fundOptions = guess => {
+      const hs = D.holdings.filter(h => h.type !== 'btc'), m = guess ? matchHolding(guess) : null;
+      const names = [...new Set((parsed.rows || []).map(r => r.name))].filter(n => !hs.some(h => txKey(h.name) === txKey(n)));
+      if(guess && !m && !names.some(n => txKey(n) === txKey(guess))) names.push(guess);
+      const pick = m ? m.id : guess ? 'new:' + (names.find(n => txKey(n) === txKey(guess)) || guess) : '';
+      return `<option value="">${esc(t('bad_fund'))}</option>` + hs.map(h => `<option value="${h.id}" ${pick === h.id ? 'selected' : ''}>${esc(h.name)}</option>`).join('')
+        + names.map(n => `<option value="new:${esc(n)}" ${pick === 'new:' + n ? 'selected' : ''}>${esc(t('import_new_fund'))}: ${esc(n)}</option>`).join('');
+    };
     const show = () => {
-      const {rows, skipped, skippedRows, bad} = parsed;
-      if(!rows.length && !skippedRows.length){ prev.innerHTML = `<div class="hint">${t('import_none')}</div>`; return; }
+      const {rows, skipped, skippedRows, badRows, bad} = parsed;
+      if(!rows.length && !skippedRows.length && !badRows.length){ prev.innerHTML = `<div class="hint">${t('import_none')}</div>`; return; }
       const groups = {};
       rows.forEach(r => { const k = txKey(r.name); (groups[k] = groups[k] || {name:r.name, rows:[]}).rows.push(r); });
       const sk = Object.entries(skipped).map(([k, n]) => `${esc(k)} ×${n}`).join(', ');
@@ -2261,12 +2292,28 @@ function importTxForm(){
             <div style="font-weight:600">${esc(r.type)} · ${esc(fmtDate(r.date))}</div>
             <div class="hint" style="margin:2px 0 6px">${esc(r.name)}<br>${esc(fmtNum(r.qty, 4))} × ${esc(fmtNum(r.price, 2))} = ${esc(fmtNum(r.total, 2))}</div>
             <select class="inp" data-skip="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy">${esc(t('skip_as_buy'))}</option><option value="sell">${esc(t('skip_as_sell'))}</option></select></div>`).join('')}` : ''}
+        ${badRows.length ? `<div style="font-weight:600;margin:14px 0 4px">${esc(t('bad_title', {n:badRows.length}))}</div>
+          <div class="hint" style="margin:0 0 8px">${t('bad_hint')}</div>
+          ${badRows.map((r, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px">
+            <div style="font:12.5px/1.4 ui-monospace,monospace;background:var(--card2);border-radius:8px;padding:8px;word-break:break-word">${esc(r.raw)}</div>
+            <div class="row2" style="margin-top:8px"><select class="inp" data-bside="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy" ${r.side === 'buy' ? 'selected' : ''}>${esc(t('buy'))}</option><option value="sell" ${r.side === 'sell' ? 'selected' : ''}>${esc(t('sell'))}</option></select>
+              <input class="inp" type="date" data-bdate="${i}" value="${esc(r.date || '')}"></div>
+            <select class="inp" data-bfund="${i}" style="margin-top:8px">${fundOptions(r.guess.name)}</select>
+            <div class="row2" style="margin-top:8px"><input class="inp" inputmode="decimal" data-bqty="${i}" placeholder="${esc(t('qty'))}" value="${esc(fmtInput(r.guess.qty))}">
+              <input class="inp" inputmode="decimal" data-bprice="${i}" placeholder="${esc(t('price_unit'))}" value="${esc(fmtInput(r.guess.price))}"></div></div>`).join('')}` : ''}
         ${sk ? `<div class="hint">${t('import_skipped')}: ${sk}</div>` : ''}
-        ${bad ? `<div class="hint">${esc(t('import_bad_rows', {n:bad}))}</div>` : ''}
         <button class="btn" id="x-go" style="margin-top:8px">${esc(t('import_go', {n:rows.length}))}</button>`;
       const goBtn = prev.querySelector('#x-go');
+      // Unread rows the user filled in: side, date, fund, units and price.
+      const fixed = () => badRows.map((r, i) => {
+        const q = sel => prev.querySelector(`[${sel}="${i}"]`).value;
+        const side = q('data-bside'), date = q('data-bdate'), fund = q('data-bfund'), qty = parseNum(q('data-bqty')), price = parseNum(q('data-bprice'));
+        return side && date && fund && qty > 0 && price > 0 ? {side, fund, r:{date, side, qty, price, total:qty * price, name:fund.startsWith('new:') ? fund.slice(4) : ''}} : null;
+      }).filter(Boolean);
       const extra = () => skippedRows.map((r, i) => ({r, side:prev.querySelector(`[data-skip="${i}"]`).value})).filter(x => x.side);
-      prev.querySelectorAll('[data-skip]').forEach(sel => sel.onchange = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length}); });
+      const relabel = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length + fixed().length}); };
+      prev.querySelectorAll('[data-bside],[data-bqty],[data-bprice],[data-bfund]').forEach(el => { el.onchange = relabel; el.oninput = relabel; });
+      prev.querySelectorAll('[data-skip]').forEach(sel => sel.onchange = relabel);
       prev.querySelector('#x-go').onclick = () => {
         let acc = sh.querySelector('#x-acc').value;
         if(acc === '+'){
@@ -2281,6 +2328,15 @@ function importTxForm(){
           const k = txKey(r.name), row = Object.assign({}, r, {side});
           if(groups[k]) groups[k].rows.push(row);
           else { const h = matchHolding(r.name); groups[k] = {name:r.name, rows:[row], target:h ? h.id : ''}; }
+        }
+        for(const {side, fund, r} of fixed()){
+          if(fund.startsWith('new:')){
+            const k = txKey(r.name);
+            if(groups[k]) groups[k].rows.push(r); else groups[k] = {name:r.name, rows:[r], target:''};
+          } else {
+            const k = 'h:' + fund;
+            (groups[k] = groups[k] || {name:'', rows:[], target:fund}).rows.push(r);
+          }
         }
         for(const [k, g] of Object.entries(groups)){
           const sel = prev.querySelector(`select[data-grp="${CSS.escape(k)}"]`);
