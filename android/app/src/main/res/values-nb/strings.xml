@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_desc">Total verdi og utviklingen siste måned</string>
+    <string name="widget_desc">Total verdi og endring: 7 dager, 30 dager, 1 år eller alt</string>
     <string name="widget_open">Åpne GrowPort for å laste inn dataene</string>
+    <string name="w_p7">7D</string>
+    <string name="w_p30">30D</string>
+    <string name="w_p365">1Å</string>
+    <string name="w_pall">Alt</string>
+    <string name="w_refresh">Oppdater</string>
 </resources>

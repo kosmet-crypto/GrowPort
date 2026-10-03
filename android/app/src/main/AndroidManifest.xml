@@ -35,5 +35,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_chart_info" />
         </receiver>
+
+        <!-- The widget's refresh button: runs the page hidden to fetch fresh prices (WidgetRefresh). -->
+        <service
+            android:name=".WidgetRefresh"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -42,8 +43,8 @@ import java.util.regex.Pattern;
  */
 public class MainActivity extends Activity {
 
-    private static final String HOST = "appassets.androidplatform.net";
-    private static final String START_URL = "https://" + HOST + "/assets/www/index.html";
+    static final String HOST = "appassets.androidplatform.net";
+    static final String START_URL = "https://" + HOST + "/assets/www/index.html";
     private static final int REQ_PICK_FILE = 1;
     private static final int REQ_SAVE_FILE = 2;
     private static final int MAX_HTTP_BYTES = 8 * 1024 * 1024;
@@ -70,15 +71,7 @@ public class MainActivity extends Activity {
         web = new WebUpdater(this);
         // The Play build never runs a downloaded page; drop one left from a sideload install.
         if (!BuildConfig.SELF_UPDATE && web.isActive()) web.rollBack();
-        // A downloaded page (see WebUpdater) is served at the same URL as the bundled one.
-        final WebViewAssetLoader.AssetsPathHandler assets = new WebViewAssetLoader.AssetsPathHandler(this);
-        final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
-                .setDomain(HOST)
-                .addPathHandler("/assets/", path -> {
-                    WebResourceResponse page = web.intercept(path);
-                    return page != null ? page : assets.handle(path);
-                })
-                .build();
+        final WebViewAssetLoader loader = assetLoader(this, web);
 
         webView = new WebView(this);
         webView.setBackgroundColor(getColor(R.color.bg));
@@ -181,6 +174,18 @@ public class MainActivity extends Activity {
             webView.loadUrl(START_URL);
             watchPageStart();
         }
+    }
+
+    /** Serves the app at START_URL; a downloaded page (see WebUpdater) is served at the same URL as the bundled one. */
+    static WebViewAssetLoader assetLoader(Context ctx, WebUpdater web) {
+        final WebViewAssetLoader.AssetsPathHandler assets = new WebViewAssetLoader.AssetsPathHandler(ctx);
+        return new WebViewAssetLoader.Builder()
+                .setDomain(HOST)
+                .addPathHandler("/assets/", path -> {
+                    WebResourceResponse page = web.intercept(path);
+                    return page != null ? page : assets.handle(path);
+                })
+                .build();
     }
 
     /* ---------- update check ---------- */
@@ -289,6 +294,50 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    /**
+     * Fetches market data (exchange rates, prices, inflation) for the page; the app is not
+     * limited by CORS like the page is. Blocking; returns the JS that answers the page:
+     * window.GP_httpDone(id, status, body), where status 0 means no connection.
+     */
+    static String httpJs(int id, String method, String url, String body, String type) {
+        int status = 0;
+        String text = "";
+        try {
+            if (!url.startsWith("https://")) throw new IllegalArgumentException("https only");
+            HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(10000);
+            c.setReadTimeout(20000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) GrowPort/" + BuildConfig.VERSION_NAME);
+            c.setRequestProperty("Accept", "application/json, text/plain, */*");
+            boolean post = "POST".equals(method);
+            c.setRequestMethod(post ? "POST" : "GET");
+            if (post) {
+                c.setDoOutput(true);
+                if (type != null && !type.isEmpty()) c.setRequestProperty("Content-Type", type);
+                try (OutputStream out = c.getOutputStream()) {
+                    out.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            status = c.getResponseCode();
+            InputStream in = status >= 400 ? c.getErrorStream() : c.getInputStream();
+            if (in != null) {
+                try (InputStream is = in) {
+                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                    byte[] b = new byte[16384];
+                    for (int n; (n = is.read(b)) > 0; ) {
+                        buf.write(b, 0, n);
+                        if (buf.size() > MAX_HTTP_BYTES) throw new IllegalStateException("Response too large");
+                    }
+                    text = buf.toString("UTF-8");
+                }
+            }
+        } catch (Exception e) {
+            status = 0;
+            text = "";
+        }
+        return "window.GP_httpDone&&window.GP_httpDone(" + id + "," + status + "," + JSONObject.quote(text) + ")";
+    }
+
     /** Methods index.html can call as window.GrowPortAndroid.*. */
     private class Bridge {
         @JavascriptInterface
@@ -327,42 +376,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void http(final int id, final String method, final String url, final String body, final String type) {
             new Thread(() -> {
-                int status = 0;
-                String text = "";
-                try {
-                    if (!url.startsWith("https://")) throw new IllegalArgumentException("https only");
-                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-                    c.setConnectTimeout(10000);
-                    c.setReadTimeout(20000);
-                    c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) GrowPort/" + BuildConfig.VERSION_NAME);
-                    c.setRequestProperty("Accept", "application/json, text/plain, */*");
-                    boolean post = "POST".equals(method);
-                    c.setRequestMethod(post ? "POST" : "GET");
-                    if (post) {
-                        c.setDoOutput(true);
-                        if (type != null && !type.isEmpty()) c.setRequestProperty("Content-Type", type);
-                        try (OutputStream out = c.getOutputStream()) {
-                            out.write(body.getBytes(StandardCharsets.UTF_8));
-                        }
-                    }
-                    status = c.getResponseCode();
-                    InputStream in = status >= 400 ? c.getErrorStream() : c.getInputStream();
-                    if (in != null) {
-                        try (InputStream is = in) {
-                            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-                            byte[] b = new byte[16384];
-                            for (int n; (n = is.read(b)) > 0; ) {
-                                buf.write(b, 0, n);
-                                if (buf.size() > MAX_HTTP_BYTES) throw new IllegalStateException("Response too large");
-                            }
-                            text = buf.toString("UTF-8");
-                        }
-                    }
-                } catch (Exception e) {
-                    status = 0;
-                    text = "";
-                }
-                final String js = "window.GP_httpDone&&window.GP_httpDone(" + id + "," + status + "," + JSONObject.quote(text) + ")";
+                final String js = httpJs(id, method, url, body, type);
                 runOnUiThread(() -> webView.evaluateJavascript(js, null));
             }).start();
         }

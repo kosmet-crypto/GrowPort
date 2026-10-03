@@ -408,6 +408,7 @@ const L = {
   clear_account_confirm:['Delete all {n} holdings in "{a}" with all their purchases, sales and entries? The account stays. Export a backup first if you may need them.','Обрисати свих {n} ставки у рачуну „{a}“, са свим куповинама, продајама и уносима? Рачун остаје. Ако ће ти можда требати, прво извези бекап.','Slette alle {n} beholdninger i «{a}» med alle kjøp, salg og registreringer? Kontoen blir værende. Eksporter en sikkerhetskopi først hvis du kan trenge dem.'],
   clear_account_done:['{n} holdings deleted','Обрисано {n} ставки','{n} beholdninger slettet'],
   today:['Today','Данас','I dag'],
+  w7:['7D','7Д','7D'], w30:['30D','30Д','30D'], w1y:['1Y','1Г','1Å'], w_updating:['Updating…','Ажурирам…','Oppdaterer…'],
   p1w:['1W','1Н','1U'], p1m:['1M','1М','1M'], pytd:['YTD','Ова г.','I år'],
   per_p1w:['Past week','Последња недеља','Siste uke'],
   per_p1m:['Past month','Последњи месец','Siste måned'],
@@ -444,6 +445,7 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 /* ================= storage ================= */
 const LS_DATA = 'growport.data.v1', LS_CACHE = 'growport.cache.v1', LS_UI = 'growport.ui.v1';
 const NATIVE = window.GrowPortAndroid || null;
+const WIDGET_JOB = !!(NATIVE && typeof NATIVE.widgetJob === 'function' && NATIVE.widgetJob());
 
 function defaultData(){
   return {
@@ -1294,25 +1296,43 @@ function drawPerf(el, A){
   el.ontouchmove = e => { if(e.touches[0]) show(e.touches[0].clientX); };
 }
 
-// Home-screen widget (Android): total value, today and one-month change and the last month's
-// value line, sent to the app whenever the page renders. Older APKs have no setWidget: skipped.
+// Home-screen widget (Android): total value, today's change and a value line for 7 days, 30 days,
+// 1 year and all time (the widget switches between them itself), sent whenever the page renders.
+// Older APKs have no setWidget: skipped. "points"/"month" stay for widgets of older APKs.
+const WIDGET_PERIODS = [['7', 7, 'w7'], ['30', 30, 'w30'], ['365', 365, 'w1y'], ['all', 0, 'pall']];
+function widgetData(){
+  const E = getEngine(), A = E.total(), m = metrics(A);
+  if(!m || A.firstIdx < 0) return null;
+  const to = E.len - 1;
+  const ch = (a, b, label) => { const c = perfChange(A, a, b); return c ? {text:fmtMoney(c.d, {sign:true}) + (c.pct != null ? ' (' + fmtPct(c.pct) + ')' : '') + ' ' + label, up:c.d >= 0} : null; };
+  const line = from => {
+    const idx = [];
+    for(let i = from; i <= to; i++) if(A.act[i] != null) idx.push(i);
+    const step = Math.max(1, Math.ceil(idx.length / 160));   // enough for a widget, small to store
+    const pts = idx.filter((i, k) => k % step === 0 || k === idx.length - 1);
+    return pts.map(i => Math.round(A.act[i] * 100) / 100);
+  };
+  const periods = WIDGET_PERIODS.map(([key, d, label]) => {
+    const from = d ? Math.max(A.firstIdx, to - d) : A.firstIdx;
+    return {key, label:t(label), points:line(from), change:ch(from, to, t(d ? label : 'per_pall'))};
+  });
+  const at = C.at ? new Date(C.at) : new Date();
+  return {title:t('total'), value:fmtMoney(m.value), today:ch(Math.max(A.firstIdx, to - 1), to, t('today')),
+    month:periods[1].change, points:periods[1].points, periods, updating:t('w_updating'),
+    updated:new Intl.DateTimeFormat(loc(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}).format(at)};
+}
 let widgetTimer;
 function pushWidget(){
-  if(!NATIVE || typeof NATIVE.setWidget !== 'function' || !D.holdings.length) return;
+  if(WIDGET_JOB || !NATIVE || typeof NATIVE.setWidget !== 'function' || !D.holdings.length) return;
   clearTimeout(widgetTimer);
-  widgetTimer = setTimeout(() => {
-    try{
-      const E = getEngine(), A = E.total(), m = metrics(A);
-      if(!m || A.firstIdx < 0) return;
-      const to = E.len - 1, from = Math.max(A.firstIdx, to - 30);
-      const pts = [];
-      for(let i = from; i <= to; i++) if(A.act[i] != null) pts.push(Math.round(A.act[i] * 100) / 100);
-      const ch = (a, b, label) => { const c = perfChange(A, a, b); return c ? {text:fmtMoney(c.d, {sign:true}) + (c.pct != null ? ' (' + fmtPct(c.pct) + ')' : '') + ' ' + label, up:c.d >= 0} : null; };
-      const today = ch(Math.max(A.firstIdx, to - 1), to, t('today')), month = ch(from, to, t('p1m'));
-      NATIVE.setWidget(JSON.stringify({title:t('total'), value:fmtMoney(m.value), today, month, points:pts,
-        updated:new Intl.DateTimeFormat(loc(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}).format(new Date())}));
-    }catch(e){}
-  }, 400);
+  widgetTimer = setTimeout(() => { try{ const w = widgetData(); if(w) NATIVE.setWidget(JSON.stringify(w)); }catch(e){} }, 400);
+}
+// The widget's refresh button loads the page in a hidden WebView (WidgetRefresh.java): fetch fresh
+// prices, send the widget its numbers and report back. User data is only read, never saved.
+async function widgetJob(){
+  try{ if(D.holdings.length) await refreshMarket(true); }catch(e){}
+  try{ const w = widgetData(); if(w) NATIVE.setWidget(JSON.stringify(w)); }catch(e){}
+  NATIVE.widgetDone();
 }
 
 function niceTicks(min, max, n){
@@ -2776,12 +2796,15 @@ C = Object.assign(emptyCache(), loadJSON(LS_CACHE) || {});
 UI = loadJSON(LS_UI) || {};
 tab = UI.tab || 'home';
 UI.allMonths = false;
+if(WIDGET_JOB) widgetJob();
+else {
 render();
 if(NATIVE && NATIVE.ready) NATIVE.ready();
 if(D.holdings.length && Date.now() - (C.at || 0) > 10 * 60e3) refreshMarket();
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible' && D.holdings.length && Date.now() - (C.at || 0) > 30 * 60e3) refreshMarket();
 });
+}
 </script>
 </body>
 </html>

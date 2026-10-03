@@ -13,7 +13,7 @@ See [SPEC.md](SPEC.md) for the agreed design (in Serbian).
 * Overview with total value, gain, the difference against bank / Bitcoin / inflation in money and as a ratio, and a main chart (value or difference view).
 * Detailed statistics: total and annual return (XIRR), largest drop, by holding, by month.
 * Main currency (NOK by default), historical exchange rates on each day.
-* Home-screen widget (Android) with the total value, today's and the month's change and the month's value line.
+* Home-screen widget (Android) with the total value, today's change and a value line for 7 days, 30 days, 1 year or all time, plus a refresh button that fetches fresh prices without opening the app.
 * English, Serbian (Cyrillic) and Norwegian.
 * Everything stays on the phone; backup and restore as a JSON file.
 
