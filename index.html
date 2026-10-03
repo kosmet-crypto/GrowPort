@@ -1823,7 +1823,8 @@ function txNum(s){
   if(!/^[-+]?[\d\s  .,']+$/.test(s) || !/\d/.test(s)) return NaN;
   return parseNum(s);
 }
-function txOk(q, p, tot){ return q > 0 && p > 0 && Math.abs(q * p - Math.abs(tot)) <= Math.max(0.03 * Math.abs(tot), 0.05); }
+// Units × price ≈ total; units received for free (bonus, transfers) come as price 0 and total 0.
+function txOk(q, p, tot){ return q > 0 && p >= 0 && (p > 0 || Math.abs(tot) < 0.005) && Math.abs(q * p - Math.abs(tot)) <= Math.max(0.03 * Math.abs(tot), 0.05); }
 // Picks units, price and total from a row's numbers: the three in a row where units × price ≈ total.
 function txTriple(nums){
   for(let i = nums.length - 3; i >= 0; i--) if(txOk(nums[i], nums[i + 1], nums[i + 2])) return {at:i, qty:nums[i], price:nums[i + 1], total:Math.abs(nums[i + 2])};
@@ -1888,8 +1889,10 @@ function txFromCells(cells, cols){
     if(!(price > 0) && qty > 0 && total > 0) price = total / qty;
     if(!(total > 0) && qty > 0 && price > 0) total = qty * price;
     const name = String(g('name') || '').trim();
-    if(side === 'skip') return qty > 0 && price > 0 ? {date, side, type:g('type'), name, qty, price, total} : {date, side, type:g('type'), name};
-    if(!(qty > 0) || !(price > 0)) return {date, side, bad:true};
+    const okNums = qty > 0 && (price > 0 || (isFinite(price) && !(total > 0)));
+    if(!(price > 0)) price = okNums ? 0 : price;
+    if(side === 'skip') return okNums ? {date, side, type:g('type'), name, qty, price, total:total || 0} : {date, side, type:g('type'), name};
+    if(!okNums) return {date, side, bad:true};
     return {date, side, name, qty, price, total};
   }
   const di = cells.findIndex(c => txDate(c));
@@ -2326,7 +2329,7 @@ function importTxForm(){
       const fixed = () => badRows.map((r, i) => {
         const q = sel => prev.querySelector(`[${sel}="${i}"]`).value;
         const side = q('data-bside'), date = q('data-bdate'), fund = q('data-bfund'), qty = parseNum(q('data-bqty')), price = parseNum(q('data-bprice'));
-        return side && date && fund && qty > 0 && price > 0 ? {side, fund, r:{date, side, qty, price, total:qty * price, name:fund.startsWith('new:') ? fund.slice(4) : ''}} : null;
+        return side && date && fund && qty > 0 && price >= 0 ? {side, fund, r:{date, side, qty, price, total:qty * price, name:fund.startsWith('new:') ? fund.slice(4) : ''}} : null;
       }).filter(Boolean);
       const extra = () => skippedRows.map((r, i) => ({r, side:prev.querySelector(`[data-skip="${i}"]`).value})).filter(x => x.side);
       const relabel = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length + fixed().length}); };
