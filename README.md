@@ -6,6 +6,7 @@ See [SPEC.md](SPEC.md) for the agreed design (in Serbian).
 
 ## Features
 * Holdings grouped in accounts: funds (value + return entered by hand, or purchases with units and price), Bitcoin you own, stocks/ETFs (live price).
+* A holdings statement from the platform (units, market value, cost price) updates each fund's value on the price date, checks the units against the imported purchases and shows the platform's cost price and unrealised gain.
 * Funds with purchases can follow a daily price from Yahoo Finance; after an import the app looks each fund up and links it only when the price matches the user's own purchase prices.
 * Import transactions from a bank or fund platform (PDF or CSV statement, or a pasted table); the comparison then starts from the real purchase dates. PDFs are read on the phone with Mozilla pdf.js bundled in the APK (`pdfjs/`); the file is not stored or sent anywhere.
 * For every deposit the app simulates the same money going into a savings account (interest credited on the 1st of each month, rate editable per period), into Bitcoin (with a purchase fee) and keeping up with inflation.

@@ -329,8 +329,8 @@ const L = {
   required:['Fill in the required fields','Попуни обавезна поља','Fyll ut feltene'],
   compare_note:['Differences compare your gain with what the same deposits would have earned in the bank, in Bitcoin, or just keeping up with inflation.','Разлике пореде твоју зараду са оним што би исте уплате зарадиле у банци, у биткоину, или колико треба да прате инфлацију.','Differansene sammenligner avkastningen din med hva de samme innskuddene ville gitt i banken, i bitcoin, eller bare for å holde tritt med inflasjonen.'],
   btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
-  import_tx:['Import transactions','Увоз трансакција','Importer transaksjoner'],
-  import_tx_hint:['Choose the PDF or CSV statement from your bank or fund platform, or paste the transaction list. You can add several files (e.g. one per year) before importing. Buys and sales are imported with their dates, units and prices; deposits and other rows are skipped. Rows already imported are not added twice.','Изабери PDF или CSV извод из банке или платформе за фондове, или налепи листу трансакција. Можеш додати више фајлова (нпр. један за сваку годину) пре увоза. Куповине и продаје се увозе са датумима, бројем удела и ценама; уплате на рачун и остали редови се прескачу. Већ увезени редови се не додају двапут.','Velg PDF- eller CSV-utskriften fra banken eller fondsplattformen, eller lim inn transaksjonslisten. Du kan legge til flere filer (f.eks. én per år) før du importerer. Kjøp og salg importeres med dato, antall andeler og kurs; innskudd og andre rader hoppes over. Rader som allerede er importert, legges ikke inn på nytt.'],
+  import_tx:['Import from bank','Увоз из банке','Import fra banken'],
+  import_tx_hint:['PDF, CSV or a pasted table from your bank. A transaction list adds purchases and sales (already imported rows are skipped); a holdings statement updates the values and checks the units.','PDF, CSV или налепљена табела из банке. Листа трансакција додаје куповине и продаје (већ увезени редови се прескачу); табела стања ажурира вредности и проверава уделе.','PDF, CSV eller en innlimt tabell fra banken. En transaksjonsliste legger til kjøp og salg (rader som finnes fra før hoppes over); en beholdningsoversikt oppdaterer verdiene og sjekker andelene.'],
   import_file:['Choose file (PDF, CSV)','Изабери фајл (PDF, CSV)','Velg fil (PDF, CSV)'],
   pdf_reading:['Reading PDF…','Читам PDF…','Leser PDF…'],
   pdf_fail:['Could not read the PDF. Reading a PDF needs an internet connection; you can also copy its text and paste it here.','PDF није могао да се прочита. За читање PDF-а треба интернет; можеш и да копираш текст из PDF-а и налепиш га овде.','Kunne ikke lese PDF-en. Lesing av PDF krever internett; du kan også kopiere teksten og lime den inn her.'],
@@ -376,6 +376,16 @@ const L = {
   avg_price:['Average purchase price','Просечна цена куповине','Snittkurs ved kjøp'],
   price_now:['Price now','Данашња цена','Kurs nå'],
   paid_net:['Paid in (purchases − sales)','Уплаћено (куповине − продаје)','Innbetalt (kjøp − salg)'],
+  st_found:['Holdings statement: {n} positions','Табела стања: {n} позиција','Beholdningsoversikt: {n} posisjoner'],
+  st_skip:['— Skip —','— Прескочи —','— Hopp over —'],
+  st_missing:['Not in the app: import the transactions PDF for it first','Нема у апликацији: прво увези PDF трансакција за њега','Ikke i appen: importer transaksjons-PDF for den først'],
+  st_units_ok:['{q} units, matches','{q} удела, поклапа се','{q} andeler, stemmer'],
+  st_units_diff:['Statement {k}, app {a}: a purchase or sale of {d} units is missing','Крон {k}, апликација {a}: недостаје куповина или продаја од {d} удела','Oversikt {k}, app {a}: mangler kjøp eller salg på {d} andeler'],
+  st_go:['Save values','Сачувај вредности','Lagre verdier'],
+  st_done:['Values saved for {n} holdings','Сачуване вредности за {n} ставки','Verdier lagret for {n} beholdninger'],
+  st_cost:['Cost price (statement {d})','Kostpris (Крон, {d})','Kostpris (oversikt {d})'],
+  st_unreal:['Unrealised gain (as on the statement)','Нереализована зарада (као у Крону)','Urealisert avkastning (som i oversikten)'],
+  st_cost_hint:['The platform counts only the units you still hold. The app\'s gain also includes money already made on sales.','Крон рачуна само уделе које још имаш. Зарада у апликацији укључује и оно што си већ зарадио продајом.','Plattformen teller bare andelene du fortsatt eier. Appens avkastning tar også med gevinst fra salg.'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -760,6 +770,8 @@ function buildEngine(){
       for(const e of ts) if(e.n <= n) q += e.side === 'sell' ? -e.qty : e.qty;
       if(q > 1e-9) pts[n] = en.value / q;
     }
+    const entryDays = new Set();
+    for(const en of D.entries) if(en.holdingId === h.id && en.value > 0) entryDays.add(dnum(en.date));
     const ps = Object.keys(pts).map(Number).sort((a, b) => a - b).map(n => ({n, p:pts[n]}));
     const price = n => {
       if(!ps.length) return null;
@@ -770,7 +782,7 @@ function buildEngine(){
       const a = ps[k], b = ps[k + 1];
       return a.p + (b.p - a.p) * (n - a.n) / (b.n - a.n);
     };
-    return {price, points:ps};
+    return {price, points:ps, entryDays};
   }
 
   function computeTrades(h){
@@ -810,7 +822,7 @@ function buildEngine(){
       let p;
       if(isBtc) p = btcPrice(n);
       else if(fp){
-        const q = tick && tick.at(n), m = q != null ? fx(tickCur, n) : null;
+        const q = tick && !fp.entryDays.has(n) ? tick.at(n) : null, m = q != null ? fx(tickCur, n) : null;
         if(q != null && m != null) p = q * m;
         else { const q2 = fp.price(n), m2 = fx(cur, n); p = q2 != null && m2 != null ? q2 * m2 : null; }
       }
@@ -1241,6 +1253,12 @@ function positionCard(h){
     ${now != null ? kv(t('price_now'), esc(fmtMoney(now, {cur, digits:2}))) : ''}
     ${kv(t('paid_net'), esc(fmtMoney(pos.net, {cur, digits:2})))}
     ${valCur != null ? kv(t('value'), esc(fmtMoney(valCur, {cur, digits:2}))) : ''}
+    ${h.statement && h.statement.cost > 0 ? (() => {
+      const st = h.statement, base = D.settings.baseCurrency, vb = valBase != null ? valBase : st.value, ug = vb - st.cost;
+      return kv(esc(t('st_cost', {d:fmtDate(st.date)})), esc(fmtMoney(st.cost, {cur:base, digits:2})))
+        + kv(t('st_unreal'), `<span class="${signCls(ug)}">${esc(fmtMoney(ug, {cur:base, digits:2, sign:true}))} · ${esc(fmtPct(ug / st.cost))}</span>`)
+        + `<div class="hint" style="margin:6px 0 0">${t('st_cost_hint')}</div>`;
+    })() : ''}
   </div>`;
 }
 function holdingRow(h){
@@ -2021,6 +2039,164 @@ async function findPriceUI(h){
   });
 }
 
+/* ---------- holdings statement (stanje) ---------- */
+// A position list from the platform: name, units, market value, price, price date, change kr,
+// change %, cost price (Kostpris) and cost per unit. It has no purchase dates, so it never creates
+// purchases; it only sets each fund's value on the price date and records the platform's cost price.
+const ST_HEAD = {
+  name:['verdipapir', 'navn', 'name', 'security', 'fond'],
+  qty:['ant', 'units', 'quantity', 'beholdning'],
+  mv:['markedsverdi', 'market value', 'verdi', 'value'],
+  price:['pris per', 'kurs', 'price'],
+  date:['kursdato', 'dato', 'date'],
+  cost:['kostpris', 'cost'],
+};
+// Every way of joining neighbouring number tokens ("1 888,66" may arrive as "1" "888,66").
+function numSegs(toks){
+  const out = [];
+  const walk = (i, groups) => {
+    if(i === toks.length){ out.push(groups); return; }
+    const tok = toks[i], last = groups[groups.length - 1];
+    walk(i + 1, groups.concat([[tok]]));
+    if(last && /^\d{3}([.,]\d+)?$/.test(tok) && /^[-−]?\d{1,3}$/.test(last[last.length - 1]) && !/[.,]/.test(last.join('')))
+      walk(i + 1, groups.slice(0, -1).concat([last.concat([tok])]));
+  };
+  if(toks.length <= 12) walk(0, []);
+  return out.map(g => ({groups:g, nums:g.map(x => txNum(x.join('')))}));
+}
+function stFromTokens(toks){
+  const di = toks.findIndex(x => txDate(x));
+  if(di < 1) return null;
+  const pi = toks.findIndex((x, i) => i > di && /%$/.test(x));
+  if(pi < 0) return null;
+  const before = toks.slice(0, di);
+  let e = before.length;
+  while(e > 0 && /^[-−+]?[\d.,']+$/.test(before[e - 1])) e--;
+  const numToks = before.slice(e);
+  let best = null;
+  for(const sg of numSegs(numToks)){
+    const n = sg.nums.length;
+    if(n < 3) continue;
+    const [q, mv, pr] = sg.nums.slice(n - 3);
+    if(q > 0 && pr > 0 && Math.abs(q * pr - mv) <= Math.max(0.01 * mv, 0.05)){ best = {sg, q, mv, pr}; break; }
+  }
+  if(!best) return {bad:true};
+  const name = before.slice(0, e).concat(best.sg.groups.slice(0, best.sg.nums.length - 3).map(g => g.join(' '))).join(' ').trim();
+  const change = txNum(toks.slice(di + 1, pi).join(''));
+  let cost = null;
+  for(const sg of numSegs(toks.slice(pi + 1))){
+    const c = sg.nums[0];
+    if(isFinite(c) && c > 0 && (!isFinite(change) || Math.abs(best.mv - change - c) <= Math.max(1, 0.002 * c))){ cost = c; break; }
+  }
+  if(cost == null && isFinite(change)) cost = best.mv - change;
+  return {name, qty:best.q, value:best.mv, price:best.pr, date:txDate(toks[di]), cost};
+}
+function parseStatement(text){
+  const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if(!/markedsverdi|kostpris|market value/i.test(lines.join(' '))) return {rows:[]};
+  const rows = [];
+  const tabbed = lines.filter(l => l.includes('\t')).length >= 2;
+  if(tabbed){
+    let cols = null;
+    for(const line of lines){
+      const cells = line.split('\t').map(c => c.trim());
+      if(!cols){
+        const low = cells.map(c => c.toLowerCase()), m = {};
+        for(const k of ['cost', 'date', 'mv', 'price', 'qty', 'name']){
+          for(const w of ST_HEAD[k]){
+            const i = low.findIndex((c, j) => c.includes(w) && !Object.values(m).includes(j) && !(k === 'cost' && /per/.test(c)) && !(k === 'price' && /kost/.test(c)));
+            if(i >= 0){ m[k] = i; break; }
+          }
+        }
+        if(m.qty != null && m.mv != null) cols = m;
+        continue;
+      }
+      const g = k => cols[k] != null ? cells[cols[k]] : '';
+      const qty = txNum(g('qty')), value = txNum(g('mv'));
+      if(!(qty > 0) || !(value > 0) || !String(g('name')).trim()) continue;
+      const cost = txNum(g('cost'));
+      rows.push({name:g('name').trim(), qty, value, price:txNum(g('price')) || value / qty, date:txDate(g('date')) || todayStr(), cost:cost > 0 ? cost : null});
+    }
+    return {rows};
+  }
+  // Plain text / PDF: a long name may wrap onto the lines around its numbers.
+  const isData = l => { const tk = l.split(/\s+/); return tk.some(x => txDate(x)) && tk.some(x => /%$/.test(x)); };
+  const isText = l => !isData(l) && /\p{L}/u.test(l) && l.split(/\s+/).length >= 2 && !/\d[\d\s.,]*%/.test(l)
+    && !/markedsverdi|kostpris|verdipapir|totalt|^sum\b/i.test(l);
+  lines.forEach((l, i) => {
+    if(!isData(l)) return;
+    const toks = l.split(/\s+/);
+    // Without a name in front, the date token comes right after the numbers: give it the wrapped name.
+    const r = stFromTokens(/^[-−+]?[\d.,']+$/.test(toks[0]) ? ['?'].concat(toks) : toks);
+    if(!r || r.bad) return;
+    if(r.name === '?' || !r.name){
+      const parts = [];
+      if(i > 0 && isText(lines[i - 1])) parts.push(lines[i - 1]);
+      if(i + 1 < lines.length && isText(lines[i + 1])) parts.push(lines[i + 1]);
+      r.name = parts.join(' ').trim();
+    } else if(/[-–,]$/.test(r.name) && i + 1 < lines.length && isText(lines[i + 1])){
+      r.name += ' ' + lines[i + 1];   // name wrapped after its first words
+    }
+    if(r.name) rows.push(r);
+  });
+  return {rows};
+}
+// Loose name match: ignores ISIN codes, case and punctuation; one name may contain the other.
+function nameKey(s){ return String(s || '').replace(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g, ' ').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''); }
+function matchHolding(name){
+  const k = nameKey(name);
+  if(!k) return null;
+  const hs = D.holdings.filter(h => h.type !== 'btc');
+  return hs.find(h => nameKey(h.name) === k) || hs.find(h => { const hk = nameKey(h.name); return hk.length > 5 && (k.includes(hk) || hk.includes(k)); }) || null;
+}
+function unitsAt(h, date){
+  let q = 0;
+  for(const e of D.trades) if(e.holdingId === h.id && e.date <= date) q += e.side === 'sell' ? -(+e.qty || 0) : (+e.qty || 0);
+  return q;
+}
+function showStatement(sh, prev, rows){
+  const base = D.settings.baseCurrency;
+  prev.innerHTML = `<div style="font-weight:600;margin:4px 0 8px">${esc(t('st_found', {n:rows.length}))}</div>
+    ${rows.map((r, i) => {
+      const h = matchHolding(r.name);
+      return `<div class="card" style="padding:10px 12px;margin-bottom:8px"><div style="font-weight:600">${esc(r.name)}</div>
+        <div class="hint" style="margin:2px 0 6px">${esc(fmtNum(r.qty, 4))} · ${esc(fmtMoney(r.value, {cur:base, digits:2}))} · ${esc(fmtDate(r.date))}</div>
+        <select class="inp" data-st="${i}"><option value="">${esc(t('st_skip'))}</option>${D.holdings.filter(x => x.type !== 'btc').map(x => `<option value="${x.id}" ${h === x ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        <div class="st-check" data-stc="${i}" style="font-size:13px;margin-top:6px"></div></div>`;
+    }).join('')}
+    <button class="btn" id="x-st-go" style="margin-top:8px">${esc(t('st_go'))}</button>`;
+  const check = i => {
+    const r = rows[i], hid = prev.querySelector(`[data-st="${i}"]`).value, box = prev.querySelector(`[data-stc="${i}"]`);
+    if(!hid){ box.innerHTML = `<span class="muted">${esc(t('st_missing'))}</span>`; return; }
+    const h = D.holdings.find(x => x.id === hid), q = unitsAt(h, r.date);
+    const ok = Math.abs(q - r.qty) <= Math.max(1e-4, r.qty * 1e-5);
+    box.innerHTML = ok ? `<span class="good">✓ ${esc(t('st_units_ok', {q:fmtNum(r.qty, 4)}))}</span>`
+      : `<span class="bad">⚠ ${esc(t('st_units_diff', {k:fmtNum(r.qty, 4), a:fmtNum(q, 4), d:fmtNum(r.qty - q, 4)}))}</span>`;
+  };
+  rows.forEach((r, i) => { check(i); prev.querySelector(`[data-st="${i}"]`).onchange = () => check(i); });
+  prev.querySelector('#x-st-go').onclick = () => {
+    const E = getEngine();
+    let n = 0;
+    rows.forEach((r, i) => {
+      const hid = prev.querySelector(`[data-st="${i}"]`).value;
+      const h = hid && D.holdings.find(x => x.id === hid);
+      if(!h) return;
+      // The statement is in the main currency; entries are kept in the holding's currency.
+      const m = E.fx(h.currency || base, dnum(r.date)) || 1;
+      // Stocks/ETFs follow their live price; only funds take the statement value as an entry.
+      if(h.type === 'fund'){
+        D.entries = D.entries.filter(x => !(x.holdingId === h.id && x.date === r.date));
+        D.entries.push({id:uid(), holdingId:h.id, date:r.date, value:r.value / m, ret:null});
+      }
+      h.statement = {date:r.date, qty:r.qty, value:r.value, cost:r.cost};
+      n++;
+    });
+    saveData(); closeSheet();
+    toast(t('st_done', {n}));
+    render(); if(page) renderPage(); refreshMarket();
+  };
+}
+
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
@@ -2095,7 +2271,12 @@ function importTxForm(){
     const accSel = sh.querySelector('#x-acc');
     const syncAcc = () => sh.querySelector('#x-accname-w').classList.toggle('hidden', accSel.value !== '+');
     accSel.onchange = syncAcc; syncAcc();
-    const read = () => { parsed = parseTransactions(sh.querySelector('#x-text').value); show(); };
+    const read = () => {
+      const txt = sh.querySelector('#x-text').value;
+      const st = parseStatement(txt);
+      if(st.rows.length){ showStatement(sh, prev, st.rows); return; }
+      parsed = parseTransactions(txt); show();
+    };
     sh.querySelector('#x-read').onclick = read;
     sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
     // Each picked file is added to the text, so several statements (e.g. one PDF per year) import together.
