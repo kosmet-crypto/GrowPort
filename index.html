@@ -422,6 +422,9 @@ const L = {
   perf_dep:['Deposit','Уплата','Innskudd'],
   perf_wd:['Withdrawal','Исплата','Uttak'],
   perf_note:['Changes leave deposits and withdrawals out.','Промене не урачунавају уплате и исплате.','Endringene tar ikke med innskudd og uttak.'],
+  compare_note_nobtc:['Differences compare your gain with what the same deposits would have earned in the bank, or just keeping up with inflation.','Разлике пореде твоју зараду са оним што би исте уплате зарадиле у банци, или колико треба да прате инфлацију.','Forskjellene sammenligner avkastningen din med hva de samme innskuddene ville gitt i banken, eller bare fulgt inflasjonen.'],
+  btc_compare:['Compare with Bitcoin','Поређење са биткоином','Sammenligning med bitcoin'],
+  on:['On','Укључено','På'], off:['Off','Искључено','Av'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -430,6 +433,8 @@ const LOCALES = {en:'en-GB', sr:'sr-Cyrl-RS', no:'nb-NO'};
 const CURRENCIES = ['NOK','EUR','USD','SEK','DKK','GBP','CHF'];
 
 let D, C, UI;
+// The Bitcoin comparison can be switched off in Settings; it then disappears from every view.
+function btcOn(){ return !D || D.settings.btcCompare !== 'off'; }
 function lang(){ return (D && D.settings.language) || 'en'; }
 function t(k, vars){
   const row = L[k]; let s = row ? row[{en:0,sr:1,no:2}[lang()] || 0] : k;
@@ -445,7 +450,7 @@ const NATIVE = window.GrowPortAndroid || null;
 function defaultData(){
   return {
     schema: 1,
-    settings: {baseCurrency:'NOK', language:'en', theme:'system', savingsRate:0.035, btcFee:0.01, inflSource:'auto', inflRate:0.03},
+    settings: {baseCurrency:'NOK', language:'en', theme:'system', savingsRate:0.035, btcFee:0.01, inflSource:'auto', inflRate:0.03, btcCompare:'on'},
     rateChanges: [], accounts: [], holdings: [], entries: [], trades: []
   };
 }
@@ -1024,7 +1029,7 @@ function chartCard(A, id){
   const vis = UI.series || {act:1, sav:1, btc:0, inf:0, inv:0};
   let keys = mode === 'value' ? ['act', 'sav', 'btc', 'inf', 'inv'] : ['sav', 'btc', 'inf'];
   if(!hasCompare) keys = mode === 'value' ? ['act'] : [];
-  if(!A.btcOk) keys = keys.filter(k => k !== 'btc');
+  if(!A.btcOk || !btcOn()) keys = keys.filter(k => k !== 'btc');
   const legendKeys = keys.filter(k => !(mode === 'value' && k === 'act'));
   return `<div class="card">
     ${withMode ? `<div class="chart-head">
@@ -1216,8 +1221,9 @@ function drawPerf(el, A){
   const pts = idxs.map(i => [i, val(i)]).filter(p => p[1] != null);
   if(pts.length < 2){ el.innerHTML = `<div class="empty-chart">${t('chart_empty')}</div>`; el.style.height = 'auto'; return; }
   const start = pts[0][1];
-  const ch = perfChange(A, from, to);
-  const up = (ch ? ch.d : pts[pts.length - 1][1] - start) >= 0;
+  // The line's colour follows the line itself: value (deposits included) in Value mode, the
+  // gain in Return mode. The numbers above the chart carry their own colour.
+  const up = pts[pts.length - 1][1] - start >= 0;
   const color = up ? 'var(--good)' : 'var(--bad)';
   const W = el.clientWidth || 320, H = 210, padT = 22, padB = 24, padR = 44;
   // Deposits / withdrawals inside the period, per day.
@@ -1372,7 +1378,8 @@ function heroCard(m, title){
 function compareCard(m, isBtcOnly){
   if(!m || !m.tracked) return '';
   const rows = [{k:'you', g:m.gain, p:m.gainPct, c:'var(--s1)'}, {k:'bank', g:m.bankGain, p:m.bankPct, c:'var(--s3)'}];
-  if(!isBtcOnly) rows.push({k:'btc', g:m.btcGain, p:m.btcPct, c:'var(--s2)'});
+  const showBtc = !isBtcOnly && btcOn();
+  if(showBtc) rows.push({k:'btc', g:m.btcGain, p:m.btcPct, c:'var(--s2)'});
   const max = Math.max(1, ...rows.filter(r => r.g != null).map(r => Math.abs(r.g)));
   const bar = r => r.g == null ? '' : `<div class="wbar"><span style="width:${Math.max(2, Math.abs(r.g) / max * 100).toFixed(1)}%;background:${r.g < 0 ? 'var(--bad)' : r.c}"></span></div>`;
   const verdict = (alt, better, worse) => {
@@ -1385,7 +1392,7 @@ function compareCard(m, isBtcOnly){
       <b class="${r.g == null ? 'muted' : r.k === 'you' ? signCls(r.g) : ''}">${r.g == null ? t('none') : esc(fmtMoney(r.g, {sign:true}))}${r.p != null ? ` <small>${esc(fmtPct(r.p))}</small>` : ''}</b></div>${bar(r)}</div>`).join('')}
     <div class="verdicts">
       ${verdict(m.bankGain, 'v_bank_better', 'v_bank_worse')}
-      ${isBtcOnly ? '' : m.btcGain == null ? `<div class="verdict muted">BTC: ${t('missing_price')}</div>` : verdict(m.btcGain, 'v_btc_better', 'v_btc_worse')}
+      ${!showBtc ? '' : m.btcGain == null ? `<div class="verdict muted">BTC: ${t('missing_price')}</div>` : verdict(m.btcGain, 'v_btc_better', 'v_btc_worse')}
     </div>
     ${m.cashReal != null ? `<div class="infl">
       <div class="it"><span class="dot" style="background:var(--s4)"></span>${t('infl_title')}</div>
@@ -1404,8 +1411,7 @@ function viewHome(){
   }
   const E = getEngine(), A = E.total(), m = metrics(A);
   let html = topBar() + demoBanner();
-  html += heroCard(m) + compareCard(m);
-  html += perfCard(A, 'perf-home');
+  html += heroCard(m) + perfCard(A, 'perf-home') + compareCard(m);
   html += `<h2>${t('accounts')}</h2>` + accountsSummary();
   return html;
 }
@@ -1537,27 +1543,27 @@ function viewStats(){
       <tr><th></th><th>${t('gain_nom')}</th><th>${t('total_ret')}</th><th>${t('annual').replace(' (XIRR)', '')}</th></tr>
       <tr><td><span class="dot" style="background:var(--s1)"></span> ${t('portfolio')}</td><td class="${signCls(m.gain)}">${esc(fmtMoney(m.gain, {sign:true}))}</td><td>${esc(fmtPct(m.gainPct))}</td><td>${esc(xr(xa))}</td></tr>
       <tr><td><span class="dot" style="background:var(--s3)"></span> ${t('bank')}</td><td>${esc(fmtMoney(m.bankGain, {sign:true}))}</td><td>${esc(fmtPct(m.bankPct))}</td><td>${esc(xr(xb))}</td></tr>
-      <tr><td><span class="dot" style="background:var(--s2)"></span> BTC</td><td>${esc(fmtMoney(m.btcGain, {sign:true}))}</td><td>${esc(fmtPct(m.btcPct))}</td><td>${esc(xr(xc))}</td></tr>
+      ${btcOn() ? `<tr><td><span class="dot" style="background:var(--s2)"></span> BTC</td><td>${esc(fmtMoney(m.btcGain, {sign:true}))}</td><td>${esc(fmtPct(m.btcPct))}</td><td>${esc(xr(xc))}</td></tr>` : ''}
       <tr><td><span class="dot" style="background:var(--s4)"></span> ${t('inflation')}</td><td>${esc(fmtMoney(m.inflGain, {sign:true}))}</td><td>${esc(fmtPct(m.inflPct))}</td><td>${esc(xr(xi))}</td></tr>
     </table></div>
     <div class="kv" style="margin-top:6px"><span class="k">${t('vs_bank')}</span><span class="v ${signCls(m.gain - m.bankGain)}">${esc(fmtMoney(m.gain - m.bankGain, {sign:true}))}<br><span class="muted" style="font-weight:400;font-size:12px">${esc(ratioText(m.gain, m.bankGain))}</span></span></div>
-    <div class="kv"><span class="k">${t('vs_btc')}</span><span class="v ${m.btcGain == null ? 'muted' : signCls(m.gain - m.btcGain)}">${m.btcGain == null ? t('none') : esc(fmtMoney(m.gain - m.btcGain, {sign:true}))}<br><span class="muted" style="font-weight:400;font-size:12px">${esc(ratioText(m.gain, m.btcGain))}</span></span></div>
+    ${btcOn() ? `<div class="kv"><span class="k">${t('vs_btc')}</span><span class="v ${m.btcGain == null ? 'muted' : signCls(m.gain - m.btcGain)}">${m.btcGain == null ? t('none') : esc(fmtMoney(m.gain - m.btcGain, {sign:true}))}<br><span class="muted" style="font-weight:400;font-size:12px">${esc(ratioText(m.gain, m.btcGain))}</span></span></div>` : ''}
     <div class="kv"><span class="k">${t('real_gain')}</span><span class="v ${signCls(m.gain - m.inflGain)}">${esc(fmtMoney(m.gain - m.inflGain, {sign:true}))}</span></div>
     <div class="kv"><span class="k">${t('maxdd')}</span><span class="v">${esc(fmtPct(-maxDrawdown(A), false))}</span></div>
     <div class="kv"><span class="k">${t('started')}</span><span class="v">${esc(fmtDate(dstr(A.n0)))}</span></div>
     ${m.preGain ? `<div class="kv"><span class="k">${esc(t('pre_gain', {v:''}).replace(/[:\s]+$/, ''))}</span><span class="v">${esc(fmtMoney(m.preGain, {sign:true}))}</span></div>` : ''}
     </div>
-    <div class="sectnote">${t('compare_note')}</div>`;
+    <div class="sectnote">${t(btcOn() ? 'compare_note' : 'compare_note_nobtc')}</div>`;
   }
   html += chartCard(A, 'chart-stats');
   if(scope === 'total' || scope.startsWith('a:')){
     const rows = A.rs.map(r => ({h:r.h, m:metrics(E.holding(r.h.id))})).filter(x => x.m);
     html += `<h2>${t('per_holding')}</h2><div class="card"><div class="scroll"><table>
-      <tr><th>${t('name')}</th><th>${t('value')}</th><th>${t('gain')}</th><th>${t('vs_bank')}</th><th>${t('vs_btc')}</th></tr>
+      <tr><th>${t('name')}</th><th>${t('value')}</th><th>${t('gain')}</th><th>${t('vs_bank')}</th>${btcOn() ? `<th>${t('vs_btc')}</th>` : ''}</tr>
       ${rows.map(({h, m}) => `<tr><td>${esc(h.name.length > 22 ? h.name.slice(0, 21) + '…' : h.name)}</td><td>${esc(fmtMoney(m.value))}</td>
         <td class="${m.tracked ? signCls(m.gain) : 'muted'}">${m.tracked ? esc(fmtMoney(m.gain, {sign:true})) : t('none')}</td>
         <td class="${m.tracked ? signCls(m.gain - m.bankGain) : 'muted'}">${m.tracked ? esc(fmtMoney(m.gain - m.bankGain, {sign:true})) : t('none')}</td>
-        <td class="${m.tracked && m.btcGain != null && h.type !== 'btc' ? signCls(m.gain - m.btcGain) : 'muted'}">${m.tracked && m.btcGain != null && h.type !== 'btc' ? esc(fmtMoney(m.gain - m.btcGain, {sign:true})) : t('none')}</td></tr>`).join('')}
+        ${btcOn() ? `<td class="${m.tracked && m.btcGain != null && h.type !== 'btc' ? signCls(m.gain - m.btcGain) : 'muted'}">${m.tracked && m.btcGain != null && h.type !== 'btc' ? esc(fmtMoney(m.gain - m.btcGain, {sign:true})) : t('none')}</td>` : ''}</tr>`).join('')}
     </table></div></div>`;
   }
   html += monthlyTable(A);
@@ -1578,10 +1584,10 @@ function monthlyTable(A){
   if(!rows.length) return '';
   const shown = UI.allMonths ? rows : rows.slice(0, 12);
   return `<h2>${t('monthly')}</h2><div class="card"><div class="scroll"><table>
-    <tr><th>${t('month')}</th><th>${t('value')}</th><th>${t('deposits')}</th><th>${t('gain')}</th><th>${t('bank')}</th><th>BTC</th></tr>
+    <tr><th>${t('month')}</th><th>${t('value')}</th><th>${t('deposits')}</th><th>${t('gain')}</th><th>${t('bank')}</th>${btcOn() ? '<th>BTC</th>' : ''}</tr>
     ${shown.map(r => `<tr><td>${esc(fmtMonth(r.mk))}</td><td>${esc(fmtMoney(r.act))}</td><td>${r.dep ? esc(fmtMoney(r.dep, {sign:true})) : t('none')}</td>
       <td class="${r.gain == null ? 'muted' : signCls(r.gain)}">${r.gain == null ? t('none') : esc(fmtMoney(r.gain, {sign:true}))}</td>
-      <td>${r.sav == null ? t('none') : esc(fmtMoney(r.sav, {sign:true}))}</td><td>${r.btc == null ? t('none') : esc(fmtMoney(r.btc, {sign:true}))}</td></tr>`).join('')}
+      <td>${r.sav == null ? t('none') : esc(fmtMoney(r.sav, {sign:true}))}</td>${btcOn() ? `<td>${r.btc == null ? t('none') : esc(fmtMoney(r.btc, {sign:true}))}</td>` : ''}</tr>`).join('')}
   </table></div>${rows.length > 12 && !UI.allMonths ? `<button class="btn ghost small" style="margin-top:10px" data-act="all-months">${t('show_all')}</button>` : ''}</div>`;
 }
 
@@ -1606,7 +1612,8 @@ function viewSettings(){
     <button class="btn ghost small" data-act="add-rate">${t('add_rate')}</button>
   </div>
   <h2>BTC</h2>
-  <div class="card"><label class="f" style="margin-bottom:0"><span>${t('btc_fee')}</span><input class="inp" inputmode="decimal" data-set="btcFee" data-pct value="${fmtInput(s.btcFee * 100)}"></label></div>
+  <div class="card"><label class="f"><span>${t('btc_compare')}</span><select class="inp" data-set="btcCompare">${opt('on', s.btcCompare || 'on', t('on'))}${opt('off', s.btcCompare || 'on', t('off'))}</select></label>
+    <label class="f" style="margin-bottom:0"><span>${t('btc_fee')}</span><input class="inp" inputmode="decimal" data-set="btcFee" data-pct value="${fmtInput(s.btcFee * 100)}"></label></div>
   <h2>${t('infl_src')}</h2>
   <div class="card">
     <label class="f"><span>${t('infl_src')}</span><select class="inp" data-set="inflSource">${opt('auto', s.inflSource, t('infl_auto'))}${opt('fixed', s.inflSource, t('infl_fixed'))}</select></label>
