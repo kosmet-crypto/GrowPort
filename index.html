@@ -2286,6 +2286,14 @@ function showStatement(sh, prev, rows){
   };
 }
 
+// Moves between share classes or accounts carry their direction in the type: incoming adds units
+// ("Inngående flytt", "Overføring inn"), outgoing removes them ("Utgående flytt", "Flytt ut").
+function skipGuess(type){
+  const w = String(type || '').toLowerCase();
+  if(/inngående|innkommende|\binn\b|innflytt|transfer in|incoming/.test(w)) return 'buy';
+  if(/utgående|\but\b|utflytt|transfer out|outgoing/.test(w)) return 'sell';
+  return '';
+}
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
@@ -2348,7 +2356,7 @@ function importTxForm(){
           ${skippedRows.map((r, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px">
             <div style="font-weight:600">${esc(r.type)} · ${esc(fmtDate(r.date))}</div>
             <div class="hint" style="margin:2px 0 6px">${esc(r.name)}<br>${esc(fmtNum(r.qty, 4))} × ${esc(fmtNum(r.price, 2))} = ${esc(fmtNum(r.total, 2))}</div>
-            <select class="inp" data-skip="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy">${esc(t('skip_as_buy'))}</option><option value="sell">${esc(t('skip_as_sell'))}</option></select></div>`).join('')}` : ''}
+            <select class="inp" data-skip="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy" ${skipGuess(r.type) === 'buy' ? 'selected' : ''}>${esc(t('skip_as_buy'))}</option><option value="sell" ${skipGuess(r.type) === 'sell' ? 'selected' : ''}>${esc(t('skip_as_sell'))}</option></select></div>`).join('')}` : ''}
         ${badRows.length ? `<div style="font-weight:600;margin:14px 0 4px">${esc(t('bad_title', {n:badRows.length}))}</div>
           <div class="hint" style="margin:0 0 8px">${t('bad_hint')}</div>
           ${badRows.map((r, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px">
@@ -2371,6 +2379,7 @@ function importTxForm(){
       const relabel = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length + fixed().length}); };
       prev.querySelectorAll('[data-bside],[data-bqty],[data-bprice],[data-bfund]').forEach(el => { el.onchange = relabel; el.oninput = relabel; });
       prev.querySelectorAll('[data-skip]').forEach(sel => sel.onchange = relabel);
+      relabel();
       prev.querySelector('#x-go').onclick = () => {
         let acc = sh.querySelector('#x-acc').value;
         if(acc === '+'){
