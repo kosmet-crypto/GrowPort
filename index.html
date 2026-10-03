@@ -360,6 +360,13 @@ const L = {
   v_bank_worse:['The bank would have given {v} more','Банка би донела {v} више','Banken ville gitt {v} mer'],
   v_btc_better:['Better than Bitcoin by {v}','Боље од биткоина за {v}','Bedre enn bitcoin med {v}'],
   v_btc_worse:['Bitcoin would have given {v} more','Биткоин би донео {v} више','Bitcoin ville gitt {v} mer'],
+  position:['Holding','Стање','Beholdning'],
+  units_fund:['Units','Удели','Andeler'],
+  units_ticker:['Shares','Комада','Antall'],
+  units_btc:['BTC','BTC','BTC'],
+  avg_price:['Average purchase price','Просечна цена куповине','Snittkurs ved kjøp'],
+  price_now:['Price now','Данашња цена','Kurs nå'],
+  paid_net:['Paid in (purchases − sales)','Уплаћено (куповине − продаје)','Innbetalt (kjøp − salg)'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -1199,10 +1206,42 @@ function viewHome(){
 function demoBanner(){ return D.demo ? `<div class="banner"><span>${t('demo_on')}</span><button class="btn small ghost" data-act="demo-clear">${t('demo_clear')}</button></div>` : ''; }
 
 const TYPE_COLOR = {fund:'var(--s1)', btc:'var(--s2)', ticker:'var(--s3)'};
+// Units held from purchases and sales (null when the holding has none), with the average
+// purchase price and what was paid in, all in the holding's currency.
+function position(h){
+  const ts = D.trades.filter(e => e.holdingId === h.id);
+  if(!ts.length) return null;
+  let qty = 0, buyQty = 0, buyCost = 0, net = 0;
+  for(const e of ts){
+    const total = h.type === 'btc' ? +e.amount || 0 : (+e.qty || 0) * (+e.price || 0) + (e.side === 'sell' ? -(+e.fee || 0) : (+e.fee || 0));
+    if(e.side === 'sell'){ qty -= +e.qty || 0; net -= total; }
+    else { qty += +e.qty || 0; buyQty += +e.qty || 0; buyCost += total; net += total; }
+  }
+  return {qty, avg:buyQty > 0 ? buyCost / buyQty : null, net, digits:h.type === 'btc' ? 8 : h.type === 'fund' ? 4 : 4};
+}
+function unitsLabel(h){ return t(h.type === 'btc' ? 'units_btc' : h.type === 'fund' ? 'units_fund' : 'units_ticker'); }
+function positionCard(h){
+  const pos = position(h);
+  if(!pos) return '';
+  const E = getEngine(), r = E.result(h.id), cur = h.currency || D.settings.baseCurrency;
+  const valBase = r && r.act[E.len - 1], m = E.fx(cur, E.T);
+  const valCur = valBase != null && m ? valBase / m : null;
+  const now = valCur != null && pos.qty > 1e-12 ? valCur / pos.qty : null;
+  const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  return `<h2>${t('position')}</h2><div class="card">
+    ${kv(esc(unitsLabel(h)), esc(fmtNum(pos.qty, pos.digits)))}
+    ${pos.avg != null ? kv(t('avg_price'), esc(fmtMoney(pos.avg, {cur, digits:2}))) : ''}
+    ${now != null ? kv(t('price_now'), esc(fmtMoney(now, {cur, digits:2}))) : ''}
+    ${kv(t('paid_net'), esc(fmtMoney(pos.net, {cur, digits:2})))}
+    ${valCur != null ? kv(t('value'), esc(fmtMoney(valCur, {cur, digits:2}))) : ''}
+  </div>`;
+}
 function holdingRow(h){
   const E = getEngine(), r = E.result(h.id);
   const A = E.holding(h.id), m = metrics(A);
   let meta = t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '');
+  const pos = position(h);
+  if(pos) meta += ' · ' + fmtNum(pos.qty, pos.digits) + ' ' + (h.type === 'btc' ? 'BTC' : unitsLabel(h).toLowerCase());
   let badge = '';
   if(r && r.warn === 'fx') badge = `<span class="badge warn">${t('missing_fx')}</span>`;
   else if(r && r.warn === 'price') badge = `<span class="badge warn">${t('missing_price')}</span>`;
@@ -1399,7 +1438,7 @@ function renderPage(){
     const m = metrics(A);
     body += heroCard(m, t('type_' + h.type) + (h.symbol ? ' · ' + h.symbol : '') + (h.currency && h.currency !== D.settings.baseCurrency ? ' · ' + h.currency : ''));
     if(!m) body += `<div class="card empty-chart">${t('chart_empty')}</div>`;
-    body += compareCard(m, h.type === 'btc');
+    body += positionCard(h) + compareCard(m, h.type === 'btc');
     if(m) body += chartCard(A, 'chart-page');
     if(h.type === 'fund'){
       const hasTx = D.trades.some(e => e.holdingId === h.id);
