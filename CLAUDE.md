@@ -18,6 +18,7 @@ and comparing them with a hypothetical savings account, Bitcoin and inflation.
 | `android/app/src/main/java/app/growport/MainActivity.java` | WebView + `GrowPortAndroid` JS bridge (`http`, `saveFile`, `checkForUpdate`, …) |
 | `.../WebUpdater.java` | Downloads the latest `index.html` from `main`, falls back to the bundled page if it fails |
 | `.../ApkInstaller.java` | In-app APK update (sideload flavor only) |
+| `.../ChartWidget.java` | Home-screen widget (total, today/month change, month line); fed by the page via `GrowPortAndroid.setWidget` |
 | `.github/workflows/android.yml` | Builds both APKs; on `main` publishes a GitHub Release `v0.1.<run>` |
 
 ### Inside `index.html` (one `<script>`, sections marked `/* ===== name ===== */`)

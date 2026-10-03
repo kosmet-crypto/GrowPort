@@ -2,4 +2,7 @@
 <resources>
     <color name="bg">#F3F5F9</color>
     <color name="brand">#2A62D6</color>
+    <color name="w_bg">#FFFFFF</color>
+    <color name="w_ink">#0F172A</color>
+    <color name="w_muted">#8A94A6</color>
 </resources>
