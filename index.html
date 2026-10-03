@@ -383,6 +383,7 @@ const L = {
   st_missing:['Not in the app: import the transactions PDF for it first','Нема у апликацији: прво увези PDF трансакција за њега','Ikke i appen: importer transaksjons-PDF for den først'],
   st_units_ok:['{q} units, matches','{q} удела, поклапа се','{q} andeler, stemmer'],
   st_units_diff:['Statement {k}, app {a}: a purchase or sale of {d} units is missing','Крон {k}, апликација {a}: недостаје куповина или продаја од {d} удела','Oversikt {k}, app {a}: mangler kjøp eller salg på {d} andeler'],
+  st_units_round:['Matches, the difference of {d} units ({v}) is rounding','Поклапа се, разлика од {d} удела ({v}) је заокруживање','Stemmer, forskjellen på {d} andeler ({v}) er avrunding'],
   st_go:['Save values','Сачувај вредности','Lagre verdier'],
   st_done:['Values saved for {n} holdings','Сачуване вредности за {n} ставки','Verdier lagret for {n} beholdninger'],
   st_cost:['Cost price (statement {d})','Kostpris (Крон, {d})','Kostpris (oversikt {d})'],
@@ -1822,7 +1823,8 @@ function txNum(s){
   if(!/^[-+]?[\d\s  .,']+$/.test(s) || !/\d/.test(s)) return NaN;
   return parseNum(s);
 }
-function txOk(q, p, tot){ return q > 0 && p > 0 && Math.abs(q * p - Math.abs(tot)) <= Math.max(0.03 * Math.abs(tot), 0.05); }
+// Units × price ≈ total; units received for free (bonus, transfers) come as price 0 and total 0.
+function txOk(q, p, tot){ return q > 0 && p >= 0 && (p > 0 || Math.abs(tot) < 0.005) && Math.abs(q * p - Math.abs(tot)) <= Math.max(0.03 * Math.abs(tot), 0.05); }
 // Picks units, price and total from a row's numbers: the three in a row where units × price ≈ total.
 function txTriple(nums){
   for(let i = nums.length - 3; i >= 0; i--) if(txOk(nums[i], nums[i + 1], nums[i + 2])) return {at:i, qty:nums[i], price:nums[i + 1], total:Math.abs(nums[i + 2])};
@@ -1887,8 +1889,10 @@ function txFromCells(cells, cols){
     if(!(price > 0) && qty > 0 && total > 0) price = total / qty;
     if(!(total > 0) && qty > 0 && price > 0) total = qty * price;
     const name = String(g('name') || '').trim();
-    if(side === 'skip') return qty > 0 && price > 0 ? {date, side, type:g('type'), name, qty, price, total} : {date, side, type:g('type'), name};
-    if(!(qty > 0) || !(price > 0)) return {date, side, bad:true};
+    const okNums = qty > 0 && (price > 0 || (isFinite(price) && !(total > 0)));
+    if(!(price > 0)) price = okNums ? 0 : price;
+    if(side === 'skip') return okNums ? {date, side, type:g('type'), name, qty, price, total:total || 0} : {date, side, type:g('type'), name};
+    if(!okNums) return {date, side, bad:true};
     return {date, side, name, qty, price, total};
   }
   const di = cells.findIndex(c => txDate(c));
@@ -2214,9 +2218,13 @@ function showStatement(sh, prev, rows){
     const r = rows[i], hid = prev.querySelector(`[data-st="${i}"]`).value, box = prev.querySelector(`[data-stc="${i}"]`);
     if(!hid){ box.innerHTML = `<span class="muted">${esc(t('st_missing'))}</span>`; return; }
     const h = D.holdings.find(x => x.id === hid), q = unitsAt(h, r.date);
-    const ok = Math.abs(q - r.qty) <= Math.max(1e-4, r.qty * 1e-5);
-    box.innerHTML = ok ? `<span class="good">✓ ${esc(t('st_units_ok', {q:fmtNum(r.qty, 4)}))}</span>`
-      : `<span class="bad">⚠ ${esc(t('st_units_diff', {k:fmtNum(r.qty, 4), a:fmtNum(q, 4), d:fmtNum(r.qty - q, 4)}))}</span>`;
+    const diff = r.qty - q, money = Math.abs(diff) * (r.price || r.value / r.qty);
+    const exact = Math.abs(diff) <= Math.max(1e-4, r.qty * 1e-5);
+    // The platform rounds units in the statement; a difference worth a few kroner is just that.
+    const rounding = !exact && money <= Math.max(10, r.value * 0.001);
+    box.innerHTML = exact ? `<span class="good">✓ ${esc(t('st_units_ok', {q:fmtNum(r.qty, 4)}))}</span>`
+      : rounding ? `<span class="good">✓ ${esc(t('st_units_round', {d:fmtNum(diff, 4), v:fmtMoney(money, {digits:2})}))}</span>`
+      : `<span class="bad">⚠ ${esc(t('st_units_diff', {k:fmtNum(r.qty, 4), a:fmtNum(q, 4), d:fmtNum(diff, 4)}))} (≈ ${esc(fmtMoney(money))})</span>`;
   };
   rows.forEach((r, i) => { check(i); prev.querySelector(`[data-st="${i}"]`).onchange = () => check(i); });
   prev.querySelector('#x-st-go').onclick = () => {
@@ -2263,7 +2271,7 @@ function importTxForm(){
     const targetOptions = name => {
       const k = txKey(name);
       const hs = D.holdings.filter(h => h.type !== 'btc');
-      const match = hs.find(h => txKey(h.name) === k);
+      const match = hs.find(h => txKey(h.name) === k) || matchHolding(name);
       return `<option value="">${esc(t('import_new_fund'))}</option>` + hs.map(h => `<option value="${h.id}" ${match === h ? 'selected' : ''}>${esc(h.name)}</option>`).join('');
     };
     const fundOptions = guess => {
@@ -2278,7 +2286,18 @@ function importTxForm(){
       const {rows, skipped, skippedRows, badRows, bad} = parsed;
       if(!rows.length && !skippedRows.length && !badRows.length){ prev.innerHTML = `<div class="hint">${t('import_none')}</div>`; return; }
       const groups = {};
-      rows.forEach(r => { const k = txKey(r.name); (groups[k] = groups[k] || {name:r.name, rows:[]}).rows.push(r); });
+      rows.forEach(r => {
+        let k = txKey(r.name);
+        if(!groups[k]){
+          const nk = nameKey(r.name);
+          const same = Object.keys(groups).find(g => { const gk = nameKey(groups[g].name); return Math.min(gk.length, nk.length) > 5 && (gk.includes(nk) || nk.includes(gk)); });
+          if(same){
+            k = same;
+            if(r.name.length > groups[k].name.length) groups[k].name = r.name;   // keep the full name
+          }
+        }
+        (groups[k] = groups[k] || {name:r.name, rows:[]}).rows.push(r);
+      });
       const sk = Object.entries(skipped).map(([k, n]) => `${esc(k)} ×${n}`).join(', ');
       prev.innerHTML = `<div style="font-weight:600;margin:4px 0 8px">${esc(t('import_found', {n:rows.length, f:Object.keys(groups).length}))}</div>
         ${Object.entries(groups).map(([k, g]) => {
@@ -2310,7 +2329,7 @@ function importTxForm(){
       const fixed = () => badRows.map((r, i) => {
         const q = sel => prev.querySelector(`[${sel}="${i}"]`).value;
         const side = q('data-bside'), date = q('data-bdate'), fund = q('data-bfund'), qty = parseNum(q('data-bqty')), price = parseNum(q('data-bprice'));
-        return side && date && fund && qty > 0 && price > 0 ? {side, fund, r:{date, side, qty, price, total:qty * price, name:fund.startsWith('new:') ? fund.slice(4) : ''}} : null;
+        return side && date && fund && qty > 0 && price >= 0 ? {side, fund, r:{date, side, qty, price, total:qty * price, name:fund.startsWith('new:') ? fund.slice(4) : ''}} : null;
       }).filter(Boolean);
       const extra = () => skippedRows.map((r, i) => ({r, side:prev.querySelector(`[data-skip="${i}"]`).value})).filter(x => x.side);
       const relabel = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length + fixed().length}); };
