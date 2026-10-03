@@ -333,8 +333,10 @@ const L = {
   btc_itself:['Bitcoin holding – compared with the bank only','Биткоин – пореди се само са банком','Bitcoin – sammenlignes kun med bank'],
   import_tx:['Import from bank','Увоз из банке','Import fra banken'],
   import_tx_hint:['PDF, CSV or a pasted table from your bank. A transaction list adds purchases and sales (already imported rows are skipped); a holdings statement updates the values and checks the units.','PDF, CSV или налепљена табела из банке. Листа трансакција додаје куповине и продаје (већ увезени редови се прескачу); табела стања ажурира вредности и проверава уделе.','PDF, CSV eller en innlimt tabell fra banken. En transaksjonsliste legger til kjøp og salg (rader som finnes fra før hoppes over); en beholdningsoversikt oppdaterer verdiene og sjekker andelene.'],
-  import_file:['Choose file (PDF, CSV)','Изабери фајл (PDF, CSV)','Velg fil (PDF, CSV)'],
+  import_file:['Choose files (PDF, CSV)','Изабери фајлове (PDF, CSV)','Velg filer (PDF, CSV)'],
   pdf_reading:['Reading PDF…','Читам PDF…','Leser PDF…'],
+  pdf_reading_n:['Reading file {i} of {n}…','Читам фајл {i} од {n}…','Leser fil {i} av {n}…'],
+  pdf_fail_n:['{n} file(s) could not be read','{n} фајл(ова) није могло да се прочита','{n} fil(er) kunne ikke leses'],
   pdf_fail:['Could not read the PDF. Reading a PDF needs an internet connection; you can also copy its text and paste it here.','PDF није могао да се прочита. За читање PDF-а треба интернет; можеш и да копираш текст из PDF-а и налепиш га овде.','Kunne ikke lese PDF-en. Lesing av PDF krever internett; du kan også kopiere teksten og lime den inn her.'],
   import_read:['Read','Учитај','Les inn'],
   import_found:['{n} transactions in {f} funds','{n} трансакција у {f} фондова','{n} transaksjoner i {f} fond'],
@@ -1987,11 +1989,10 @@ function txGuess(raw){
   const toks = raw.replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
   const di = toks.findIndex(x => txDate(x));
   const rest = toks.slice(di + 1);
-  const numToks = [], name = [];
-  rest.forEach((x, i) => {
-    if(i === 0 && txSide(x) !== 'skip') return;
-    if(/^[-−+]?[\d.,']+$/.test(x) && isFinite(txNum(x))) numToks.push(x); else if(!/^[-–]$/.test(x)) name.push(x);
-  });
+  const body = rest.slice(rest.length && txSide(rest[0]) !== 'skip' ? 1 : 0);
+  let e = body.length;
+  while(e > 0 && (/^[-−+]?[\d.,']+$/.test(body[e - 1]) || /^[-–]$/.test(body[e - 1]))) e--;
+  const numToks = body.slice(e).filter(x => !/^[-–]$/.test(x)), name = body.slice(0, e).filter((x, i, a) => !(/^[-–]$/.test(x) && (i === 0 || i === a.length - 1)));
   // Join thousands groups ("3" "132,00") the most, then read units, price and total in order.
   const segs = numSegs(numToks).sort((a, b) => a.nums.length - b.nums.length);
   const nums = segs.length ? segs[0].nums.map(Math.abs) : [];
@@ -2227,7 +2228,13 @@ function matchHolding(name){
   const k = nameKey(name);
   if(!k) return null;
   const hs = D.holdings.filter(h => h.type !== 'btc');
-  return hs.find(h => nameKey(h.name) === k) || hs.find(h => { const hk = nameKey(h.name); return hk.length > 5 && (k.includes(hk) || hk.includes(k)); }) || null;
+  const exact = hs.find(h => nameKey(h.name) === k);
+  if(exact) return exact;
+  // Loose match (a name cut by a line break, an ISIN prefix): of several candidates take the one
+  // closest in length, so "… ETF" beats a stray "… ETF 0,1417".
+  const loose = hs.filter(h => { const hk = nameKey(h.name); return hk.length > 5 && (k.includes(hk) || hk.includes(k)); });
+  loose.sort((a, b) => Math.abs(nameKey(a.name).length - k.length) - Math.abs(nameKey(b.name).length - k.length));
+  return loose[0] || null;
 }
 function unitsAt(h, date){
   let q = 0;
@@ -2281,6 +2288,14 @@ function showStatement(sh, prev, rows){
   };
 }
 
+// Moves between share classes or accounts carry their direction in the type: incoming adds units
+// ("Inngående flytt", "Overføring inn"), outgoing removes them ("Utgående flytt", "Flytt ut").
+function skipGuess(type){
+  const w = String(type || '').toLowerCase();
+  if(/inngående|innkommende|\binn\b|innflytt|transfer in|incoming/.test(w)) return 'buy';
+  if(/utgående|\but\b|utflytt|transfer out|outgoing/.test(w)) return 'sell';
+  return '';
+}
 function txKey(s){ return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 function importTxForm(){
   const defAcc = page && page.type === 'account' ? page.id : (D.accounts[0] && D.accounts[0].id);
@@ -2289,7 +2304,7 @@ function importTxForm(){
     <div class="hint">${t('import_tx_hint')}</div>
     <textarea class="inp" id="x-text" rows="7" style="font-size:13px;font-family:ui-monospace,monospace;resize:vertical" placeholder="2026-09-14\tKjøp\tKLP AksjeUSA Indeks N\t0,0388\t1 888,66\t73,28"></textarea>
     <div class="btnrow" style="margin:8px 0 12px"><button class="btn ghost small" id="x-file-b">${t('import_file')}</button><button class="btn small" id="x-read">${t('import_read')}</button></div>
-    <input type="file" id="x-file" accept=".pdf,.csv,.txt,.tsv,application/pdf,text/*" class="hidden">
+    <input type="file" id="x-file" accept=".pdf,.csv,.txt,.tsv,application/pdf,text/*" class="hidden" multiple>
     <div class="row2">
       <label class="f"><span>${t('account')}</span><select class="inp" id="x-acc">${accOpts}</select></label>
       <label class="f"><span>${t('currency')}</span><select class="inp" id="x-cur">${CURRENCIES.map(c => `<option ${c === D.settings.baseCurrency ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
@@ -2343,7 +2358,7 @@ function importTxForm(){
           ${skippedRows.map((r, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px">
             <div style="font-weight:600">${esc(r.type)} · ${esc(fmtDate(r.date))}</div>
             <div class="hint" style="margin:2px 0 6px">${esc(r.name)}<br>${esc(fmtNum(r.qty, 4))} × ${esc(fmtNum(r.price, 2))} = ${esc(fmtNum(r.total, 2))}</div>
-            <select class="inp" data-skip="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy">${esc(t('skip_as_buy'))}</option><option value="sell">${esc(t('skip_as_sell'))}</option></select></div>`).join('')}` : ''}
+            <select class="inp" data-skip="${i}"><option value="">${esc(t('skip_keep'))}</option><option value="buy" ${skipGuess(r.type) === 'buy' ? 'selected' : ''}>${esc(t('skip_as_buy'))}</option><option value="sell" ${skipGuess(r.type) === 'sell' ? 'selected' : ''}>${esc(t('skip_as_sell'))}</option></select></div>`).join('')}` : ''}
         ${badRows.length ? `<div style="font-weight:600;margin:14px 0 4px">${esc(t('bad_title', {n:badRows.length}))}</div>
           <div class="hint" style="margin:0 0 8px">${t('bad_hint')}</div>
           ${badRows.map((r, i) => `<div class="card" style="padding:10px 12px;margin-bottom:8px">
@@ -2366,6 +2381,7 @@ function importTxForm(){
       const relabel = () => { goBtn.textContent = t('import_go', {n:rows.length + extra().length + fixed().length}); };
       prev.querySelectorAll('[data-bside],[data-bqty],[data-bprice],[data-bfund]').forEach(el => { el.onchange = relabel; el.oninput = relabel; });
       prev.querySelectorAll('[data-skip]').forEach(sel => sel.onchange = relabel);
+      relabel();
       prev.querySelector('#x-go').onclick = () => {
         let acc = sh.querySelector('#x-acc').value;
         if(acc === '+'){
@@ -2424,19 +2440,32 @@ function importTxForm(){
     sh.querySelector('#x-read').onclick = read;
     sh.querySelector('#x-file-b').onclick = () => sh.querySelector('#x-file').click();
     // Each picked file is added to the text, so several statements (e.g. one PDF per year) import together.
-    const addText = txt => { const ta = sh.querySelector('#x-text'); ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt; read(); };
-    sh.querySelector('#x-file').onchange = ev => {
-      const f = ev.target.files[0]; if(!f) return;
-      ev.target.value = '';
+    // Several files (e.g. one PDF per year) can be picked at once; they are read one after another
+    // and their text is added together, so the preview covers all of them.
+    const readFile = f => new Promise(ok => {
       const rd = new FileReader();
       if(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'){
-        prev.innerHTML = `<div class="hint">${t('pdf_reading')}</div>`;
-        rd.onload = () => pdfToText(new Uint8Array(rd.result)).then(addText).catch(() => { prev.innerHTML = `<div class="hint">${t('pdf_fail')}</div>`; });
+        rd.onload = () => pdfToText(new Uint8Array(rd.result)).then(ok, () => ok(null));
         rd.readAsArrayBuffer(f);
       } else {
-        rd.onload = () => addText(rd.result);
+        rd.onload = () => ok(String(rd.result));
         rd.readAsText(f);
       }
+    });
+    sh.querySelector('#x-file').onchange = async ev => {
+      const files = [...ev.target.files];
+      ev.target.value = '';
+      if(!files.length) return;
+      let failed = 0;
+      for(let k = 0; k < files.length; k++){
+        prev.innerHTML = `<div class="hint">${esc(t('pdf_reading_n', {i:k + 1, n:files.length}))}</div>`;
+        const txt = await readFile(files[k]);
+        if(txt == null){ failed++; continue; }
+        const ta = sh.querySelector('#x-text');
+        ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt;
+      }
+      if(sh.querySelector('#x-text').value.trim()) read();
+      if(failed) toast(t('pdf_fail_n', {n:failed}));
     };
   });
 }
