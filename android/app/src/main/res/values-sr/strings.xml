@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_desc">Укупна вредност и њено кретање у последњих месец дана</string>
+    <string name="widget_desc">Укупна вредност и промена: 7 дана, 30 дана, 1 година или од почетка</string>
     <string name="widget_open">Отвори GrowPort да учита податке</string>
+    <string name="w_p7">7Д</string>
+    <string name="w_p30">30Д</string>
+    <string name="w_p365">1Г</string>
+    <string name="w_pall">Све</string>
+    <string name="w_refresh">Ажурирај</string>
 </resources>

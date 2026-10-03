@@ -4,4 +4,5 @@
     <color name="w_bg">#131824</color>
     <color name="w_ink">#EEF2F8</color>
     <color name="w_muted">#738099</color>
+    <color name="w_chip">#252D40</color>
 </resources>

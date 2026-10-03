@@ -5,4 +5,5 @@
     <color name="w_bg">#FFFFFF</color>
     <color name="w_ink">#0F172A</color>
     <color name="w_muted">#8A94A6</color>
+    <color name="w_chip">#E6ECF8</color>
 </resources>

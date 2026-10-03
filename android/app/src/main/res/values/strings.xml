@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_desc">Total value and its change over the last month</string>
+    <string name="widget_desc">Total value and its change: 7 days, 30 days, 1 year or all time</string>
     <string name="widget_open">Open GrowPort to load your data</string>
+    <string name="w_p7">7D</string>
+    <string name="w_p30">30D</string>
+    <string name="w_p365">1Y</string>
+    <string name="w_pall">All</string>
+    <string name="w_refresh">Update</string>
 </resources>

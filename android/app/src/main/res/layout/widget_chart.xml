@@ -5,34 +5,48 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_bg"
-    android:padding="14dp">
+    android:paddingStart="10dp"
+    android:paddingEnd="6dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="12dp">
 
+    <!-- Period buttons (left) and refresh (right): they act on the widget, the rest opens the app. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
+        <TextView android:id="@+id/w_p7" style="@style/WidgetChip" android:text="@string/w_p7" />
+        <TextView android:id="@+id/w_p30" style="@style/WidgetChip" android:text="@string/w_p30" />
+        <TextView android:id="@+id/w_p365" style="@style/WidgetChip" android:text="@string/w_p365" />
+        <TextView android:id="@+id/w_pall" style="@style/WidgetChip" android:text="@string/w_pall" />
         <TextView
-            android:id="@+id/w_title"
+            android:id="@+id/w_updated"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textAllCaps="true"
-            android:textColor="@color/w_muted"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:text="GrowPort" />
-        <TextView
-            android:id="@+id/w_updated"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textColor="@color/w_muted"
             android:textSize="10sp" />
+        <ImageView
+            android:id="@+id/w_refresh"
+            android:layout_width="34dp"
+            android:layout_height="30dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:src="@drawable/widget_refresh"
+            android:contentDescription="@string/w_refresh" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/w_value"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:maxLines="1"
         android:textColor="@color/w_ink"
         android:textSize="22sp"
@@ -41,6 +55,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:orientation="horizontal">
         <TextView
             android:id="@+id/w_today"
@@ -65,6 +80,8 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:layout_marginTop="6dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
         android:scaleType="fitXY"
         android:contentDescription="@null" />
 </LinearLayout>
