@@ -115,7 +115,7 @@ input,select{font:inherit;color:var(--ink)}
 .btn{border:0;border-radius:14px;padding:13px 16px;font-weight:650;background:var(--accent);color:var(--accent-ink);width:100%;font-size:15px;box-shadow:0 6px 16px -8px var(--accent);transition:transform .1s}
 .btn:active{transform:scale(.98)}
 .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
-.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line);box-shadow:none}
 .btn.small{width:auto;padding:8px 12px;font-size:13px;border-radius:10px}
 .btnrow{display:flex;gap:8px}
 .btnrow .btn{flex:1}
@@ -397,6 +397,9 @@ const L = {
   bad_title:['Rows that could not be read ({n})','Редови који нису прочитани ({n})','Rader som ikke kunne leses ({n})'],
   bad_hint:['Exactly as they are in the file. If one is a purchase or sale, pick it, check the fund, units and price, and it is imported with the rest.','Тачно како стоје у фајлу. Ако је неки куповина или продаја, изабери то, провери фонд, уделе и цену, па се увози са осталима.','Akkurat slik de står i filen. Er en av dem et kjøp eller salg, velg det, sjekk fond, andeler og kurs, så importeres den med resten.'],
   bad_fund:['Choose fund','Изабери фонд','Velg fond'],
+  clear_account:['Delete all holdings in this account ({n})','Обриши све ставке у рачуну ({n})','Slett alle beholdninger i kontoen ({n})'],
+  clear_account_confirm:['Delete all {n} holdings in "{a}" with all their purchases, sales and entries? The account stays. Export a backup first if you may need them.','Обрисати свих {n} ставки у рачуну „{a}“, са свим куповинама, продајама и уносима? Рачун остаје. Ако ће ти можда требати, прво извези бекап.','Slette alle {n} beholdninger i «{a}» med alle kjøp, salg og registreringer? Kontoen blir værende. Eksporter en sikkerhetskopi først hvis du kan trenge dem.'],
+  clear_account_done:['{n} holdings deleted','Обрисано {n} ставки','{n} beholdninger slettet'],
   none:['—','—','—'],
   ok:['OK','У реду','OK']
 };
@@ -1495,6 +1498,8 @@ function renderPage(){
     const m = metrics(A);
     body += heroCard(m) + compareCard(m) + (m ? chartCard(A, 'chart-page') : '');
     body += `<button class="btn ghost" style="margin-bottom:12px" data-act="edit-account">${t('rename')}</button>`;
+    const n = D.holdings.filter(h => h.accountId === a.id).length;
+    if(n) body += `<button class="btn danger" style="margin-bottom:12px" data-act="clear-account">${esc(t('clear_account', {n}))}</button>`;
     const hs = D.holdings.filter(h => h.accountId === a.id);
     body += `<div class="list">${hs.map(holdingRow).join('')}</div>`;
   }
@@ -2497,6 +2502,18 @@ document.addEventListener('click', e => {
     case 'add-account': accountForm(); break;
     case 'edit-holding': if(h) holdingForm(h); break;
     case 'edit-account': if(page && page.type === 'account') accountForm(D.accounts.find(x => x.id === page.id)); break;
+    case 'clear-account': {
+      // Removes every holding of this account with its purchases, sales and value entries; the account stays.
+      const a = page && page.type === 'account' && D.accounts.find(x => x.id === page.id);
+      if(!a) break;
+      const ids = D.holdings.filter(x => x.accountId === a.id).map(x => x.id);
+      if(!ids.length || !confirm(t('clear_account_confirm', {n:ids.length, a:a.name}))) break;
+      D.holdings = D.holdings.filter(x => !ids.includes(x.id));
+      D.entries = D.entries.filter(x => !ids.includes(x.holdingId));
+      D.trades = D.trades.filter(x => !ids.includes(x.holdingId));
+      saveData(); render(); renderPage(); toast(t('clear_account_done', {n:ids.length}));
+      break;
+    }
     case 'new-entry': if(h) entryForm(h); break;
     case 'new-trade': if(h) tradeForm(h); break;
     case 'find-price': if(h) findPriceUI(h); break;
