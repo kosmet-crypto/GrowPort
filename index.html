@@ -1987,11 +1987,10 @@ function txGuess(raw){
   const toks = raw.replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
   const di = toks.findIndex(x => txDate(x));
   const rest = toks.slice(di + 1);
-  const numToks = [], name = [];
-  rest.forEach((x, i) => {
-    if(i === 0 && txSide(x) !== 'skip') return;
-    if(/^[-−+]?[\d.,']+$/.test(x) && isFinite(txNum(x))) numToks.push(x); else if(!/^[-–]$/.test(x)) name.push(x);
-  });
+  const body = rest.slice(rest.length && txSide(rest[0]) !== 'skip' ? 1 : 0);
+  let e = body.length;
+  while(e > 0 && (/^[-−+]?[\d.,']+$/.test(body[e - 1]) || /^[-–]$/.test(body[e - 1]))) e--;
+  const numToks = body.slice(e).filter(x => !/^[-–]$/.test(x)), name = body.slice(0, e).filter((x, i, a) => !(/^[-–]$/.test(x) && (i === 0 || i === a.length - 1)));
   // Join thousands groups ("3" "132,00") the most, then read units, price and total in order.
   const segs = numSegs(numToks).sort((a, b) => a.nums.length - b.nums.length);
   const nums = segs.length ? segs[0].nums.map(Math.abs) : [];
@@ -2227,7 +2226,13 @@ function matchHolding(name){
   const k = nameKey(name);
   if(!k) return null;
   const hs = D.holdings.filter(h => h.type !== 'btc');
-  return hs.find(h => nameKey(h.name) === k) || hs.find(h => { const hk = nameKey(h.name); return hk.length > 5 && (k.includes(hk) || hk.includes(k)); }) || null;
+  const exact = hs.find(h => nameKey(h.name) === k);
+  if(exact) return exact;
+  // Loose match (a name cut by a line break, an ISIN prefix): of several candidates take the one
+  // closest in length, so "… ETF" beats a stray "… ETF 0,1417".
+  const loose = hs.filter(h => { const hk = nameKey(h.name); return hk.length > 5 && (k.includes(hk) || hk.includes(k)); });
+  loose.sort((a, b) => Math.abs(nameKey(a.name).length - k.length) - Math.abs(nameKey(b.name).length - k.length));
+  return loose[0] || null;
 }
 function unitsAt(h, date){
   let q = 0;
